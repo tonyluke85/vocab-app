@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vocab">
+<meta name="theme-color" content="#0f0f1a">
+<link rel="manifest" href="manifest.json">
+<title>Vocab — Spanish Flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg:        #0f0f1a;
+    --surface:   #1a1a2e;
+    --card:      #16213e;
+    --accent:    #e8a045;
+    --accent2:   #5b8dee;
+    --correct:   #3ecf8e;
+    --incorrect: #f26b6b;
+    --text:      #f0ede8;
+    --muted:     #7a7a9a;
+    --border:    rgba(255,255,255,0.08);
+    --radius:    18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%; width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    position: fixed;
+  }
+
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .screen.active { opacity: 1; pointer-events: all; }
+
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+  }
+  body::before {
+    width: 340px; height: 340px;
+    background: var(--accent2);
+    top: -100px; left: -80px;
+  }
+  body::after {
+    width: 280px; height: 280px;
+    background: var(--accent);
+    bottom: -80px; right: -60px;
+  }
+
+  /* ── SIGN-IN ── */
+  #screen-signin { gap: 32px; }
+
+  .logo-mark {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 8px 32px rgba(232,160,69,0.3);
+  }
+
+  .app-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px; font-weight: 700;
+    letter-spacing: -0.5px; text-align: center;
+  }
+  .app-title span { color: var(--accent); }
+
+  .app-subtitle {
+    color: var(--muted); font-size: 15px;
+    text-align: center; line-height: 1.6; max-width: 280px;
+  }
+
+  .btn-google {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--text); color: #1a1a2e;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    padding: 14px 28px; border-radius: 100px; border: none;
+    cursor: pointer; width: 100%; max-width: 300px; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .btn-google:active { transform: scale(0.97); }
+  .btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .signin-note {
+    font-size: 12px; color: var(--muted);
+    text-align: center; max-width: 280px; line-height: 1.6;
+  }
+
+  /* ── HOME ── */
+  #screen-home {
+    justify-content: flex-start;
+    padding-top: env(safe-area-inset-top, 48px);
+    gap: 0;
+  }
+
+  .home-header {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0 24px;
+  }
+  .home-greeting { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; }
+
+  .btn-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted);
+    transition: color 0.2s, background 0.2s;
+  }
+  .btn-icon:active { background: var(--card); }
+
+  .stats-row {
+    width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 12px; text-align: center;
+  }
+  .stat-card[onclick]:active { background: var(--card); border-color: var(--incorrect); }
+  .stat-value {
+    font-family: 'Playfair Display', serif; font-size: 26px;
+    font-weight: 700; color: var(--accent); line-height: 1;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .section-title { width: 100%; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+
+  .sheet-list {
+    width: 100%; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px;
+  }
+  .sheet-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .sheet-item:active { background: var(--card); border-color: var(--accent); }
+  .sheet-item-left { display: flex; flex-direction: column; gap: 2px; }
+  .sheet-name { font-size: 15px; font-weight: 500; }
+  .sheet-meta { font-size: 12px; color: var(--muted); }
+  .sheet-item-right { display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 100px; font-weight: 500; }
+  .badge-incorrect { background: rgba(242,107,107,0.15); color: var(--incorrect); }
+  .badge-unseen    { background: rgba(91,141,238,0.15);  color: var(--accent2); }
+
+  .start-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #d4892e);
+    color: #0f0f1a; font-family: 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 600; padding: 16px;
+    border-radius: 100px; border: none; cursor: pointer; margin-top: 16px;
+    transition: transform 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 20px rgba(232,160,69,0.3); flex-shrink: 0;
+  }
+  .start-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── LOADING ── */
+  #screen-loading { gap: 20px; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 15px; }
+
+  /* ── FLASHCARD ── */
+  #screen-flashcard {
+    justify-content: flex-start;
+    padding-top: env(safe-area-inset-top, 48px); gap: 0;
+  }
+  .fc-header {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0 16px;
+  }
+  .fc-progress-wrap { flex: 1; margin: 0 16px; }
+  .fc-progress-bar { height: 4px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+  .fc-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px; transition: width 0.4s ease;
+  }
+  .fc-counter { font-size: 12px; color: var(--muted); text-align: center; margin-top: 5px; }
+
+  .fc-card-wrap {
+    flex: 1; width: 100%; display: flex; flex-direction: column;
+    justify-content: center; gap: 16px;
+  }
+  .fc-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 32px 24px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .fc-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .fc-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
+  .fc-word { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; line-height: 1.2; color: var(--text); }
+  .fc-source { font-size: 12px; color: var(--muted); margin-top: 10px; font-style: italic; }
+  .requeue-pill {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(232,160,69,0.2); color: var(--accent);
+    font-size: 10px; padding: 3px 8px; border-radius: 100px; font-weight: 500;
+  }
+
+  .fc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fc-option {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400;
+    color: var(--text); cursor: pointer; text-align: center;
+    transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    line-height: 1.3; min-height: 58px;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-appearance: none; border-style: solid;
+  }
+  .fc-option:active { transform: scale(0.97); }
+  .fc-option.correct   { background: rgba(62,207,142,0.15); border-color: var(--correct); color: var(--correct); }
+  .fc-option.incorrect { background: rgba(242,107,107,0.15); border-color: var(--incorrect); color: var(--incorrect); }
+  .fc-option.disabled  { opacity: 0.45; cursor: default; }
+  .fc-option.reveal    { border-color: var(--correct); opacity: 1; }
+
+  .fc-result {
+    text-align: center; font-size: 15px; font-weight: 500;
+    min-height: 24px; transition: opacity 0.3s; opacity: 0; padding: 4px 0;
+  }
+  .fc-result.show { opacity: 1; }
+  .fc-result.correct-msg   { color: var(--correct); }
+  .fc-result.incorrect-msg { color: var(--incorrect); }
+
+  .fc-next-btn {
+    width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500; padding: 15px;
+    border-radius: 100px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, opacity 0.3s;
+    opacity: 0; pointer-events: none; margin-top: 4px; flex-shrink: 0;
+  }
+  .fc-next-btn.show { opacity: 1; pointer-events: all; }
+  .fc-next-btn:active { background: var(--card); border-color: var(--accent); }
+
+  /* Action row (Don't know + Back) */
+  .fc-action-row, .fc-back-row {
+    display: flex; gap: 10px; margin-top: 8px; flex-shrink: 0;
+  }
+  .fc-dont-know-btn {
+    flex: 1; background: rgba(242,107,107,0.12); border: 1.5px solid rgba(242,107,107,0.35);
+    color: var(--incorrect); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500; padding: 14px 10px;
+    border-radius: 100px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .fc-dont-know-btn:active { background: rgba(242,107,107,0.25); }
+  .fc-dont-know-btn:disabled { opacity: 0.35; cursor: default; }
+  .fc-back-btn {
+    flex: 1; background: var(--surface); border: 1.5px solid var(--border);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500; padding: 14px 10px;
+    border-radius: 100px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .fc-back-btn:active { background: var(--card); color: var(--text); }
+  .fc-back-btn:disabled { opacity: 0.35; cursor: default; }
+  .fc-resume-btn {
+    flex: 1; background: var(--surface); border: 1.5px solid var(--accent);
+    color: var(--accent); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500; padding: 14px 10px;
+    border-radius: 100px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .fc-resume-btn:active { background: rgba(232,160,69,0.15); }
+
+  /* ── RESULTS ── */
+  #screen-results { gap: 24px; }
+  .results-icon { font-size: 56px; }
+  .results-title { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700; text-align: center; }
+  .results-score { font-size: 64px; font-family: 'Playfair Display', serif; font-weight: 700; color: var(--accent); line-height: 1; }
+  .results-breakdown { display: flex; gap: 24px; }
+  .rb-item { text-align: center; }
+  .rb-val { font-size: 22px; font-weight: 600; }
+  .rb-val.c { color: var(--correct); }
+  .rb-val.i { color: var(--incorrect); }
+  .rb-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .results-note { font-size: 13px; color: var(--muted); text-align: center; max-width: 280px; line-height: 1.6; }
+
+  .btn-primary {
+    width: 100%; max-width: 300px;
+    background: linear-gradient(135deg, var(--accent), #d4892e);
+    color: #0f0f1a; font-family: 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 600; padding: 16px;
+    border-radius: 100px; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(232,160,69,0.3); transition: transform 0.15s;
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    width: 100%; max-width: 300px; background: transparent; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 12px;
+    border-radius: 100px; border: 1px solid var(--border); cursor: pointer;
+  }
+  .btn-secondary:active { color: var(--text); border-color: var(--muted); }
+
+  /* ── SYNC OVERLAY ── */
+  #sync-overlay {
+    position: fixed; inset: 0; background: rgba(15,15,26,0.85);
+    backdrop-filter: blur(8px); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  #sync-overlay.show { opacity: 1; pointer-events: all; }
+  #sync-msg { font-size: 15px; color: var(--muted); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 13px; padding: 10px 20px;
+    border-radius: 100px; white-space: nowrap;
+    opacity: 0; transition: opacity 0.3s, transform 0.3s;
+    z-index: 200; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .sheet-list::-webkit-scrollbar { width: 0; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+</style>
+</head>
+<body>
+
+<!-- SIGN-IN -->
+<div id="screen-signin" class="screen active">
+  <div class="logo-mark">🇪🇸</div>
+  <div><div class="app-title">Vocab<span>.</span></div></div>
+  <p class="app-subtitle">Spanish flashcards powered by your Google Sheets vocab lists.</p>
+  <button class="btn-google" onclick="signIn()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    Sign in with Google
+  </button>
+  <p class="signin-note">You'll be asked to grant read/write access to your Google Sheets so the app can sync your vocab lists and save your results.</p>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="home-header">
+    <div class="home-greeting">Your Lists</div>
+    <div style="display:flex;gap:8px;">
+      <div class="btn-icon" onclick="syncSheets()" title="Sync">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+      <div class="btn-icon" onclick="signOut()" title="Sign out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Words</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-unseen" style="color:var(--accent2)">—</div><div class="stat-label">Unseen</div></div>
+    <div class="stat-card" id="stat-incorrect-card" onclick="startIncorrectTest()" style="cursor:pointer" title="Test incorrect words">
+      <div class="stat-value" id="stat-incorrect" style="color:var(--incorrect)">—</div>
+      <div class="stat-label">Incorrect ▶</div>
+    </div>
+  </div>
+  <div class="section-title">Vocab Lists</div>
+  <div class="sheet-list" id="sheet-list"></div>
+  <button class="start-btn safe-bottom" id="start-btn" onclick="startTest()" disabled>Start 100-Word Test</button>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Loading…</div>
+</div>
+
+<!-- FLASHCARD -->
+<div id="screen-flashcard" class="screen">
+  <div class="fc-header">
+    <div class="btn-icon" onclick="confirmQuit()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </div>
+    <div class="fc-progress-wrap">
+      <div class="fc-progress-bar"><div class="fc-progress-fill" id="fc-progress" style="width:0%"></div></div>
+      <div class="fc-counter" id="fc-counter">0 / 0</div>
+    </div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="fc-card-wrap">
+    <div class="fc-card" id="fc-card">
+      <div class="fc-label">Translate to Spanish</div>
+      <div class="fc-word" id="fc-word">—</div>
+      <div class="fc-source" id="fc-source"></div>
+      <div class="requeue-pill" id="fc-requeue" style="display:none">↩ Review</div>
+    </div>
+    <div class="fc-options" id="fc-options">
+      <button class="fc-option" id="opt-0" onclick="selectOption(0)"></button>
+      <button class="fc-option" id="opt-1" onclick="selectOption(1)"></button>
+      <button class="fc-option" id="opt-2" onclick="selectOption(2)"></button>
+      <button class="fc-option" id="opt-3" onclick="selectOption(3)"></button>
+    </div>
+    <div class="fc-result" id="fc-result"></div>
+    <!-- Always-visible bottom row -->
+    <div class="fc-action-row" id="fc-action-row">
+      <button class="fc-dont-know-btn" id="fc-dont-know-btn" onclick="markDontKnow()">Don't know</button>
+      <button class="fc-back-btn" id="fc-back-btn" onclick="goBack()">Back</button>
+    </div>
+    <!-- Back-mode row: shown when reviewing previous card (replaces action row) -->
+    <div class="fc-back-row" id="fc-back-row" style="display:none">
+      <button class="fc-dont-know-btn" id="fc-back-dont-know-btn" onclick="backMarkDontKnow()">Don't know</button>
+      <button class="fc-resume-btn" id="fc-resume-btn" onclick="resumeFromBack()">Resume</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="results-icon" id="results-icon">🎉</div>
+  <div class="results-title">Test Complete!</div>
+  <div class="results-score" id="results-score">0%</div>
+  <div class="results-breakdown">
+    <div class="rb-item"><div class="rb-val c" id="results-correct">0</div><div class="rb-label">Correct</div></div>
+    <div class="rb-item"><div class="rb-val i" id="results-incorrect">0</div><div class="rb-label">Incorrect</div></div>
+  </div>
+  <p class="results-note" id="results-note"></p>
+  <button class="btn-primary" onclick="showHome()">Back to Lists</button>
+  <button class="btn-secondary" id="test-again-btn" onclick="startTest(state.activeSheetFilter)">Test Again</button>
+</div>
+
+<!-- SYNC OVERLAY -->
+<div id="sync-overlay">
+  <div class="spinner"></div>
+  <div id="sync-msg">Syncing with Google Sheets…</div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIG — fill these in
+// ══════════════════════════════════════════════════════════
+const CONFIG = {
+  CLIENT_ID:      '766787197346-idbn7c7as7uei14v67qisjjg2kjoqauq.apps.googleusercontent.com',
+  SPREADSHEET_ID: '1r-BpCf0dTzVRI7BeJKLDYvoJm8L0ZFUGKENn7xhVyTo',
+  EXCLUDED_SHEETS: ['Test', 'Importer', 'Character Corrections', 'Sheet1'],
+  NUM_QUESTIONS: 100,
+  NUM_OPTIONS: 4,
+};
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let state = {
+  accessToken: null,
+  tokenExpiry: null,
+  vocab: [],
+  queue: [], queueIndex: 0,
+  currentCard: null, answered: false,
+  testResults: [],
+  phase: 'main',
+  mainCorrect: 0, mainIncorrect: 0,
+  activeSheetFilter: null,
+  backMode: false,
+  backSnapshot: null,
+  autoAdvanceTimer: null,
+};
+
+// ══════════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function showHome() {
+  // Re-derive stats from the in-memory vocab (kept current by writeResult)
+  if (state.vocab.length) populateHome(state.vocab);
+  showScreen('home');
+}
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg || 'Loading…';
+  showScreen('loading');
+}
+
+// ══════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ══════════════════════════════════════════════════════════
+//  GOOGLE IDENTITY SERVICES AUTH
+//  Uses requestAccessToken() which opens a popup — no redirects,
+//  no URI matching issues, works on mobile Safari.
+// ══════════════════════════════════════════════════════════
+let tokenClient;
+
+function initGoogleAuth() {
+  // GIS must be loaded first
+  if (!window.google || !window.google.accounts) {
+    setTimeout(initGoogleAuth, 200);
+    return;
+  }
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: async (tokenResponse) => {
+      if (tokenResponse.error) {
+        toast('Sign-in failed: ' + tokenResponse.error);
+        showScreen('signin');
+        return;
+      }
+
+      state.accessToken = tokenResponse.access_token;
+      // GIS tokens last 1 hour
+      state.tokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+
+      // Persist token
+      localStorage.setItem('vocab_token', JSON.stringify({
+        token: state.accessToken,
+        expiry: state.tokenExpiry,
+      }));
+
+      // Load vocab and proceed
+      showLoading('Loading your vocab lists…');
+      try {
+        const vocab = await loadAllVocab();
+        populateHome(vocab);
+        showHome();
+      } catch(e) {
+        toast('Could not load sheet data. Check your Spreadsheet ID.');
+        console.error(e);
+        showScreen('signin');
+      }
+    },
+  });
+}
+
+function signIn() {
+  if (!tokenClient) {
+    toast('Google auth not ready yet — please wait a moment and try again.');
+    return;
+  }
+  // This opens a popup (no redirect needed)
+  tokenClient.requestAccessToken({ prompt: 'select_account' });
+}
+
+function signOut() {
+  if (!confirm('Sign out?')) return;
+  if (state.accessToken && window.google) {
+    google.accounts.oauth2.revoke(state.accessToken, () => {});
+  }
+  state.accessToken = null;
+  localStorage.removeItem('vocab_token');
+  localStorage.removeItem('vocab_cache');
+  showScreen('signin');
+}
+
+function tryRestoreToken() {
+  const raw = localStorage.getItem('vocab_token');
+  if (!raw) return false;
+  try {
+    const { token, expiry } = JSON.parse(raw);
+    // Only restore if token still has >5 minutes left
+    if (token && expiry && Date.now() < expiry - 300000) {
+      state.accessToken = token;
+      state.tokenExpiry = expiry;
+      return true;
+    }
+  } catch(e) {}
+  localStorage.removeItem('vocab_token');
+  return false;
+}
+
+// Silently request a fresh token (no prompt) if we have a session
+function silentRefresh() {
+  return new Promise((resolve) => {
+    if (!tokenClient) { resolve(false); return; }
+    const orig = tokenClient.callback;
+    tokenClient.callback = (resp) => {
+      tokenClient.callback = orig;
+      if (resp.error || !resp.access_token) { resolve(false); return; }
+      state.accessToken = resp.access_token;
+      state.tokenExpiry = Date.now() + (resp.expires_in * 1000);
+      localStorage.setItem('vocab_token', JSON.stringify({
+        token: state.accessToken, expiry: state.tokenExpiry,
+      }));
+      resolve(true);
+    };
+    tokenClient.requestAccessToken({ prompt: '' }); // empty prompt = silent
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  SHEETS API
+// ══════════════════════════════════════════════════════════
+async function sheetsGet(range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + state.accessToken } });
+  if (res.status === 401) throw new Error('AUTH_EXPIRED');
+  if (!res.ok) throw new Error('Sheets GET failed: ' + res.status);
+  return res.json();
+}
+
+async function sheetsUpdate(range, values) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ range, majorDimension: 'ROWS', values }),
+  });
+  if (!res.ok) console.warn('Write failed:', res.status);
+}
+
+async function getSheetNames() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}?fields=sheets.properties.title`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + state.accessToken } });
+  if (res.status === 401) throw new Error('AUTH_EXPIRED');
+  if (!res.ok) throw new Error('Could not fetch sheet names');
+  const data = await res.json();
+  return data.sheets.map(s => s.properties.title).filter(n => !CONFIG.EXCLUDED_SHEETS.includes(n));
+}
+
+// ══════════════════════════════════════════════════════════
+//  VOCAB LOADING
+// ══════════════════════════════════════════════════════════
+async function loadAllVocab() {
+  const sheetNames = await getSheetNames();
+  const vocab = [];
+  for (const name of sheetNames) {
+    const data = await sheetsGet(`${name}!A:D`);
+    const rows = data.values || [];
+    rows.forEach((row, idx) => {
+      if (idx === 0) return; // skip header row (row 1 in Sheets)
+      const spanish    = (row[0] || '').trim();
+      const english    = (row[1] || '').trim();
+      const tsRaw      = row[2] || '';
+      const lastResult = (row[3] || '').trim();
+      if (!spanish || !english) return;
+      let lastSeen = null;
+      if (tsRaw) {
+        // Handle DD/MM/YYYY HH:MM:SS (Sheets-native) and ISO 8601 (legacy)
+        let d;
+        if (/^\d{2}\/\d{2}\/\d{4}/.test(tsRaw)) {
+          const [datePart, timePart] = tsRaw.split(' ');
+          const [dd, mm, yyyy] = datePart.split('/');
+          d = new Date(`${yyyy}-${mm}-${dd}${timePart ? 'T' + timePart : ''}`);
+        } else {
+          d = new Date(tsRaw);
+        }
+        if (!isNaN(d)) lastSeen = d;
+      }
+      // idx+1 gives actual Sheets row number (idx 0 = row 1 header, idx 1 = row 2, etc.)
+      vocab.push({ spanish, english, sheetName: name, row: idx + 1, lastSeen, lastResult });
+    });
+  }
+  localStorage.setItem('vocab_cache', JSON.stringify(
+    vocab.map(v => ({ ...v, lastSeen: v.lastSeen ? v.lastSeen.toISOString() : null }))
+  ));
+  return vocab;
+}
+
+function loadVocabFromCache() {
+  const raw = localStorage.getItem('vocab_cache');
+  if (!raw) return null;
+  return JSON.parse(raw).map(v => ({ ...v, lastSeen: v.lastSeen ? new Date(v.lastSeen) : null }));
+}
+
+// ══════════════════════════════════════════════════════════
+//  WORD SELECTION
+// ══════════════════════════════════════════════════════════
+function pickTestWords(vocab) {
+  const n = Math.min(CONFIG.NUM_QUESTIONS, vocab.length);
+  const incorrect = shuffle(vocab.filter(e => e.lastResult === 'Incorrect'));
+  const unstamped = shuffle(vocab.filter(e => e.lastResult !== 'Incorrect' && !e.lastSeen));
+  const stamped   = vocab.filter(e => e.lastResult !== 'Incorrect' && e.lastSeen)
+                         .sort((a, b) => a.lastSeen - b.lastSeen);
+  const chosen = [];
+  for (const t of [incorrect, unstamped, stamped]) {
+    if (chosen.length >= n) break;
+    chosen.push(...t.slice(0, n - chosen.length));
+  }
+  return chosen;
+}
+
+function buildOptions(entry, allVocab) {
+  const sameSheet = allVocab.filter(e => e.sheetName === entry.sheetName && e.spanish !== entry.spanish);
+  const others    = allVocab.filter(e => e.spanish !== entry.spanish);
+  const pool = [...sameSheet];
+  others.forEach(e => { if (!pool.find(d => d.spanish === e.spanish)) pool.push(e); });
+  const distractors = shuffle(pool).slice(0, CONFIG.NUM_OPTIONS - 1).map(e => e.spanish);
+  return shuffle([entry.spanish, ...distractors]);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══════════════════════════════════════════════════════════
+//  HOME
+// ══════════════════════════════════════════════════════════
+function populateHome(vocab) {
+  state.vocab = vocab;
+  document.getElementById('stat-total').textContent     = vocab.length;
+  document.getElementById('stat-unseen').textContent    = vocab.filter(v => !v.lastSeen).length;
+  document.getElementById('stat-incorrect').textContent = vocab.filter(v => v.lastResult === 'Incorrect').length;
+
+  const bySheet = {};
+  vocab.forEach(v => {
+    if (!bySheet[v.sheetName]) bySheet[v.sheetName] = { total: 0, incorrect: 0, unseen: 0 };
+    bySheet[v.sheetName].total++;
+    if (v.lastResult === 'Incorrect') bySheet[v.sheetName].incorrect++;
+    if (!v.lastSeen) bySheet[v.sheetName].unseen++;
+  });
+
+  const list = document.getElementById('sheet-list');
+  list.innerHTML = '';
+  Object.entries(bySheet).forEach(([name, stats]) => {
+    const div = document.createElement('div');
+    div.className = 'sheet-item';
+    const badges = [
+      stats.incorrect ? `<span class="badge badge-incorrect">⚠ ${stats.incorrect} incorrect</span>` : '',
+      stats.unseen    ? `<span class="badge badge-unseen">${stats.unseen} new</span>` : '',
+    ].filter(Boolean).join('');
+    div.innerHTML = `
+      <div class="sheet-item-left">
+        <div class="sheet-name">${name}</div>
+        <div class="sheet-meta">${stats.total} words · tap to test this list</div>
+      </div>
+      <div class="sheet-item-right">${badges}</div>`;
+    div.onclick = () => startTest(name);
+    list.appendChild(div);
+  });
+
+  document.getElementById('start-btn').disabled = vocab.length < CONFIG.NUM_OPTIONS;
+}
+
+async function syncSheets() {
+  document.getElementById('sync-overlay').classList.add('show');
+  try {
+    const vocab = await loadAllVocab();
+    populateHome(vocab);
+    toast('✓ Synced');
+  } catch(e) {
+    toast('Sync failed — check connection');
+  } finally {
+    document.getElementById('sync-overlay').classList.remove('show');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  TEST
+// ══════════════════════════════════════════════════════════
+function startIncorrectTest() {
+  const incorrectWords = state.vocab.filter(v => v.lastResult === 'Incorrect');
+  if (!incorrectWords.length) { toast('No incorrect words — great work!'); return; }
+  // Use pickTestWords scoped to just the incorrect words
+  const chosen = pickTestWords(incorrectWords);
+  state.queue = chosen; state.queueIndex = 0;
+  state.testResults = [];
+  state.phase = 'main'; state.mainCorrect = 0; state.mainIncorrect = 0;
+  state.activeSheetFilter = null;
+  state.backMode = false;
+  state.backSnapshot = null;
+  state.autoAdvanceTimer = null;
+  showScreen('flashcard');
+  showCard();
+}
+
+function startTest(sheetFilter) {
+  const vocabPool = sheetFilter
+    ? state.vocab.filter(v => v.sheetName === sheetFilter)
+    : state.vocab;
+  const chosen = pickTestWords(vocabPool);
+  state.queue = chosen; state.queueIndex = 0;
+  state.testResults = [];
+  state.phase = 'main'; state.mainCorrect = 0; state.mainIncorrect = 0;
+  state.activeSheetFilter = sheetFilter || null;
+  state.backMode = false;
+  state.backSnapshot = null;
+  state.autoAdvanceTimer = null;
+  showScreen('flashcard');
+  showCard();
+}
+
+function showCard() {
+  state.backMode = false;
+  clearTimeout(state.autoAdvanceTimer);
+  // Always show the standard action row; hide back-mode row
+  document.getElementById('fc-action-row').style.display = 'flex';
+  document.getElementById('fc-back-row').style.display = 'none';
+  // Don't know always enabled on a fresh card
+  document.getElementById('fc-dont-know-btn').disabled = false;
+  // Back disabled if no previous card exists
+  document.getElementById('fc-back-btn').disabled = !state.backSnapshot;
+
+  const entry = state.queue[state.queueIndex];
+  if (!entry) {
+    if (state.phase === 'main') {
+      const finalCards = state.testResults.filter(r => !r.correct)
+        .map(r => ({ ...r.entry, _requeue: false, _final: true }));
+      if (finalCards.length > 0) {
+        state.phase = 'final';
+        state.queue = shuffle(finalCards);
+        state.queueIndex = 0;
+        showCard();
+      } else { finishTest(); }
+    } else { finishTest(); }
+    return;
+  }
+
+  state.currentCard = entry;
+  state.answered = false;
+  const options = buildOptions(entry, state.vocab);
+
+  document.getElementById('fc-word').textContent   = entry.english;
+  document.getElementById('fc-source').textContent = entry.sheetName;
+  document.getElementById('fc-requeue').style.display = entry._requeue ? '' : 'none';
+
+  const total = state.queue.length;
+  const pct   = ((state.queueIndex + 1) / Math.max(total, 1)) * 100;
+  document.getElementById('fc-progress').style.width = pct + '%';
+  const prefix = state.phase === 'final' ? '🔁 Final review ' : '';
+  document.getElementById('fc-counter').textContent = `${prefix}${state.queueIndex + 1} / ${total}`;
+
+  for (let i = 0; i < 4; i++) {
+    const btn = document.getElementById('opt-' + i);
+    btn.textContent = options[i] || '';
+    btn.className = 'fc-option';
+    btn.disabled = false;
+    btn._value = options[i];
+  }
+
+  const res = document.getElementById('fc-result');
+  res.textContent = ''; res.className = 'fc-result';
+}
+
+function applyAnswerUI(correct, entry) {
+  const res = document.getElementById('fc-result');
+  res.textContent = correct ? '✅ Correct!' : `❌ Incorrect — ${entry.spanish}`;
+  res.className = 'fc-result show ' + (correct ? 'correct-msg' : 'incorrect-msg');
+}
+
+function recordAnswer(entry, correct) {
+  if (state.phase === 'main') {
+    if (correct) state.mainCorrect++; else state.mainIncorrect++;
+    state.testResults.push({ entry, correct });
+    if (!correct && !entry._requeue) {
+      const at = Math.min(state.queueIndex + 3, state.queue.length);
+      state.queue.splice(at, 0, { ...entry, _requeue: true });
+    }
+  }
+
+  // Only write back to Sheets on the first encounter of a word.
+  // Requeued cards and final-review cards must never overwrite the original result.
+  // An incorrect result must never be overwritten by a subsequent correct one.
+  const isFirstEncounter = !entry._requeue && !entry._final && state.phase === 'main';
+  if (isFirstEncounter) {
+    writeResult(entry, correct);
+  }
+}
+
+function scheduleAdvance() {
+  const isLast = state.queueIndex === state.queue.length - 1;
+  state.autoAdvanceTimer = setTimeout(() => {
+    if (state.backMode) return; // user tapped Back, don't advance
+    if (isLast && state.phase === 'final') {
+      finishTest();
+    } else {
+      state.queueIndex++;
+      showCard();
+    }
+  }, 1000);
+}
+
+function selectOption(idx) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const entry    = state.currentCard;
+  const selected = document.getElementById('opt-' + idx)._value;
+  const correct  = selected.trim() === entry.spanish.trim();
+
+  // Save snapshot for Back button
+  state.backSnapshot = {
+    queueIndex: state.queueIndex,
+    entry,
+    correct,
+    options: Array.from({length:4}, (_,i) => document.getElementById('opt-'+i)._value),
+    selectedIdx: idx,
+  };
+
+  // Style buttons
+  for (let i = 0; i < 4; i++) {
+    const btn = document.getElementById('opt-' + i);
+    btn.disabled = true;
+    if (btn._value.trim() === entry.spanish.trim()) btn.classList.add('reveal');
+  }
+  const tapped = document.getElementById('opt-' + idx);
+  tapped.classList.remove('reveal');
+  tapped.classList.add(correct ? 'correct' : 'incorrect');
+
+  applyAnswerUI(correct, entry);
+
+  // Disable Don't know once an answer has been selected
+  document.getElementById('fc-dont-know-btn').disabled = true;
+
+  recordAnswer(entry, correct);
+  scheduleAdvance();
+}
+
+function markDontKnow() {
+  if (state.answered) return;
+  state.answered = true;
+
+  const entry = state.currentCard;
+
+  // Save snapshot
+  state.backSnapshot = {
+    queueIndex: state.queueIndex,
+    entry,
+    correct: false,
+    options: Array.from({length:4}, (_,i) => document.getElementById('opt-'+i)._value),
+    selectedIdx: -1,
+  };
+
+  // Reveal correct answer
+  for (let i = 0; i < 4; i++) {
+    const btn = document.getElementById('opt-' + i);
+    btn.disabled = true;
+    if (btn._value.trim() === entry.spanish.trim()) btn.classList.add('reveal');
+  }
+
+  applyAnswerUI(false, entry);
+
+  // Disable Don't know — already used
+  document.getElementById('fc-dont-know-btn').disabled = true;
+
+  recordAnswer(entry, false);
+  scheduleAdvance();
+}
+
+function goBack() {
+  if (!state.backSnapshot) return;
+  state.backMode = true;
+  clearTimeout(state.autoAdvanceTimer);
+
+  const snap = state.backSnapshot;
+  const entry = snap.entry;
+
+  // Restore card display
+  document.getElementById('fc-word').textContent   = entry.english;
+  document.getElementById('fc-source').textContent = entry.sheetName;
+  document.getElementById('fc-requeue').style.display = entry._requeue ? '' : 'none';
+
+  // Restore counter
+  const total = state.queue.length;
+  const pct   = ((snap.queueIndex + 1) / Math.max(total, 1)) * 100;
+  document.getElementById('fc-progress').style.width = pct + '%';
+  const prefix = state.phase === 'final' ? '🔁 Final review ' : '';
+  document.getElementById('fc-counter').textContent = `${prefix}${snap.queueIndex + 1} / ${total}`;
+
+  // Restore options
+  for (let i = 0; i < 4; i++) {
+    const btn = document.getElementById('opt-' + i);
+    btn.textContent = snap.options[i] || '';
+    btn._value = snap.options[i];
+    btn.className = 'fc-option';
+    btn.disabled = true;
+    if (btn._value.trim() === entry.spanish.trim()) btn.classList.add('reveal');
+  }
+  if (snap.selectedIdx >= 0) {
+    const tapped = document.getElementById('opt-' + snap.selectedIdx);
+    tapped.classList.remove('reveal');
+    tapped.classList.add(snap.correct ? 'correct' : 'incorrect');
+  }
+
+  applyAnswerUI(snap.correct, entry);
+
+  // Switch to back-mode row; only show Don't know if previous answer was correct
+  document.getElementById('fc-action-row').style.display = 'none';
+  document.getElementById('fc-back-dont-know-btn').style.display = snap.correct ? '' : 'none';
+  document.getElementById('fc-back-row').style.display = 'flex';
+}
+
+function backMarkDontKnow() {
+  // Flip a previous Correct → Incorrect
+  const snap = state.backSnapshot;
+  if (!snap || !snap.correct) return;
+
+  // Adjust counts
+  if (state.phase === 'main') {
+    state.mainCorrect--;
+    state.mainIncorrect++;
+
+    // Update testResults entry
+    const r = state.testResults.find(r =>
+      r.entry.sheetName === snap.entry.sheetName && r.entry.row === snap.entry.row
+    );
+    if (r) r.correct = false;
+
+    // Queue for re-review if not already requeued
+    if (!snap.entry._requeue) {
+      // Insert before the current card position so it appears soon
+      const at = Math.min(state.queueIndex, state.queue.length);
+      state.queue.splice(at, 0, { ...snap.entry, _requeue: true });
+      state.queueIndex = at; // point to the requeued card; Resume will re-show current
+    }
+  }
+
+  writeResult(snap.entry, false);
+
+  // Update snapshot so Resume knows the corrected state
+  state.backSnapshot = { ...snap, correct: false };
+
+  // Update back-card UI
+  applyAnswerUI(false, snap.entry);
+  if (snap.selectedIdx >= 0) {
+    const tapped = document.getElementById('opt-' + snap.selectedIdx);
+    tapped.classList.remove('correct');
+    tapped.classList.add('incorrect');
+  }
+
+  // Hide Don't know — can't change again
+  document.getElementById('fc-back-dont-know-btn').style.display = 'none';
+}
+
+function resumeFromBack() {
+  state.backMode = false;
+  document.getElementById('fc-back-row').style.display = 'none';
+  document.getElementById('fc-action-row').style.display = 'flex';
+  showCard();
+}
+
+function nextCard() { state.queueIndex++; showCard(); }
+function confirmQuit() { if (confirm('Quit this test?')) showHome(); }
+
+function finishTest() {
+  const total = state.mainCorrect + state.mainIncorrect;
+  const pct   = total > 0 ? Math.round((state.mainCorrect / total) * 100) : 0;
+  document.getElementById('results-score').textContent     = pct + '%';
+  document.getElementById('results-correct').textContent   = state.mainCorrect;
+  document.getElementById('results-incorrect').textContent = state.mainIncorrect;
+  document.getElementById('results-icon').textContent      = pct >= 80 ? '🎉' : pct >= 50 ? '💪' : '📚';
+  document.getElementById('results-note').textContent      = state.mainIncorrect > 0
+    ? `${state.mainIncorrect} incorrect word(s) saved — they'll appear first next time.`
+    : 'Perfect score! Results saved to your Google Sheet.';
+  showScreen('results');
+}
+
+// ══════════════════════════════════════════════════════════
+//  WRITE BACK
+// ══════════════════════════════════════════════════════════
+const pendingWrites = [];
+let writeTimer;
+
+function writeResult(entry, correct) {
+  const outcome = correct ? 'Correct' : 'Incorrect';
+  // Format timestamp as 'DD/MM/YYYY HH:MM:SS' which Google Sheets recognises natively
+  const now = new Date();
+  const ts = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  const cached = state.vocab.find(v => v.sheetName === entry.sheetName && v.row === entry.row);
+  if (cached) { cached.lastResult = outcome; cached.lastSeen = now; }
+  pendingWrites.push({ entry, outcome, ts });
+  clearTimeout(writeTimer);
+  writeTimer = setTimeout(flushWrites, 2000);
+}
+
+async function flushWrites() {
+  if (!pendingWrites.length || !state.accessToken) return;
+  const batch = pendingWrites.splice(0);
+  const bySheet = {};
+  batch.forEach(w => { (bySheet[w.entry.sheetName] = bySheet[w.entry.sheetName] || []).push(w); });
+  for (const [sheet, writes] of Object.entries(bySheet)) {
+    for (const w of writes) {
+      await sheetsUpdate(`${sheet}!C${w.entry.row}:D${w.entry.row}`, [[w.ts, w.outcome]]);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+async function init() {
+  // Start loading GIS in parallel
+  initGoogleAuth();
+
+  // Try to restore a still-valid token from a previous session
+  if (tryRestoreToken()) {
+    showLoading('Loading your vocab lists…');
+    try {
+      const vocab = await loadAllVocab();
+      populateHome(vocab);
+      showHome();
+      return;
+    } catch(e) {
+      if (e.message === 'AUTH_EXPIRED') {
+        // Token in storage was stale — try a silent refresh
+        showLoading('Refreshing sign-in…');
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          try {
+            const vocab = await loadAllVocab();
+            populateHome(vocab);
+            showHome();
+            return;
+          } catch(e2) { /* fall through */ }
+        }
+      }
+      // Network error? Try cache
+      const cached = loadVocabFromCache();
+      if (cached) { populateHome(cached); showHome(); toast('Offline — showing cached data'); return; }
+    }
+  }
+
+  showScreen('signin');
+}
+
+init();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
