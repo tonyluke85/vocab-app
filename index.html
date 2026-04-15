@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>MIR Prep</title>
+
+<style>
+:root {
+  --bg:#0d0f14;--surface:#161b24;--surface2:#1e2535;--border:#2a3347;
+  --accent:#3b82f6;--glow:rgba(59,130,246,0.25);--green:#22c55e;
+  --red:#ef4444;--yellow:#f59e0b;--text:#e8eaf0;--muted:#6b7a99;
+  --r:14px;--body:'Georgia','Times New Roman',serif;
+  --ui:system-ui,-apple-system,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* AUTH */
+#screen-auth{align-items:center;justify-content:center;padding:32px 24px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,.12) 0%,transparent 70%)}
+.auth-logo{font-size:48px;margin-bottom:8px}
+.auth-title{font-size:28px;font-weight:700;margin-bottom:4px}
+.auth-sub{color:var(--muted);font-size:14px;margin-bottom:40px}
+.auth-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px}
+.tab-row{display:flex;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:24px}
+.tab{flex:1;padding:8px;text-align:center;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .2s;border:none;background:transparent}
+.tab.active{background:var(--accent);color:#fff}
+.lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.inp{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;margin-bottom:16px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.inp:focus{border-color:var(--accent)}
+.btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;-webkit-appearance:none}
+.btn:active{transform:scale(.98);opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn.danger{background:var(--red)}
+.btn.sm{padding:10px 20px;font-size:14px;width:auto}
+.auth-err{color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px}
+
+/* HOME */
+#screen-home{background:var(--bg)}
+.home-hdr{padding:56px 20px 20px;background:linear-gradient(to bottom,rgba(59,130,246,.08),transparent)}
+.greeting{font-size:13px;color:var(--muted);margin-bottom:4px}
+.home-title{font-size:26px;font-weight:700}
+.home-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:20px 20px 10px}
+.exam-list{padding:0 16px 140px;display:flex;flex-direction:column;gap:10px}
+.exam-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 16px;cursor:pointer;transition:transform .15s,border-color .15s;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.exam-card:active{transform:scale(.98);border-color:var(--accent)}
+.exam-name{font-size:17px;font-weight:600;margin-bottom:4px}
+.exam-meta{font-size:13px;color:var(--muted)}
+.score-area{text-align:right;flex-shrink:0}
+.score-num{font-size:20px;font-weight:700;line-height:1}
+.score-num.good{color:var(--green)}.score-num.mid{color:var(--yellow)}.score-num.bad{color:var(--red)}.score-num.none{color:var(--muted);font-size:13px;font-weight:400}
+.score-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.att-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;margin-top:4px;border:1px solid}
+.att-badge.resume{background:rgba(59,130,246,.12);color:var(--accent);border-color:rgba(59,130,246,.3)}
+.att-badge.partial{background:rgba(107,122,153,.12);color:var(--muted);border-color:rgba(107,122,153,.3)}
+.chevron{color:var(--muted);font-size:18px;margin-left:4px}
+.empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:15px}
+.sign-out{font-size:13px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:transparent}
+
+/* EXAM */
+#screen-exam{background:var(--bg)}
+.topbar{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.back-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:6px 12px;cursor:pointer;flex-shrink:0}
+.nav-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;padding:6px 10px;cursor:pointer;flex-shrink:0;line-height:1}
+.nav-btn:disabled{opacity:.3;cursor:not-allowed}
+.prog-wrap{flex:1;min-width:0}
+.prog-lbl{font-size:12px;color:var(--muted);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease}
+.score-chip{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--surface2);white-space:nowrap;flex-shrink:0}
+.q-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 160px}
+.tema-tag{display:inline-block;font-size:11px;font-weight:600;color:#a78bfa;background:rgba(167,139,250,.1);padding:3px 10px;border-radius:20px;margin-bottom:8px;border:1px solid rgba(167,139,250,.2)}
+.q-num-tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:var(--glow);padding:3px 10px;border-radius:20px;margin-bottom:14px}
+.q-text{font-family:var(--body);font-size:16px;line-height:1.7;margin-bottom:20px}
+.img-ref{display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,.15);color:var(--accent);padding:2px 8px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(59,130,246,.3);font-family:var(--ui);transition:background .15s;white-space:nowrap;text-decoration:none}
+.img-ref:hover{background:rgba(59,130,246,.25)}
+.opts{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.opt{width:100%;text-align:left;padding:14px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-size:15px;line-height:1.5;cursor:pointer;display:flex;gap:12px;align-items:flex-start;transition:border-color .15s,background .15s;font-family:var(--body);-webkit-appearance:none}
+.opt:active:not([disabled]){transform:scale(.99)}
+.opt-n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--ui);color:var(--muted);margin-top:1px}
+.opt.correct{border-color:var(--green);background:rgba(34,197,94,.08)}
+.opt.correct .opt-n{background:var(--green);color:#fff}
+.opt.wrong{border-color:var(--red);background:rgba(239,68,68,.08)}
+.opt.wrong .opt-n{background:var(--red);color:#fff}
+.opt.dimmed{opacity:.45}
+.opt[disabled]{cursor:not-allowed}
+/* Reviewing a past question */
+.reviewing-banner{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--yellow);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.jump-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+/* FEEDBACK */
+.feedback{position:fixed;bottom:0;left:0;right:0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:20;display:flex;align-items:flex-start;gap:12px}
+.feedback.show{transform:translateY(0)}
+.feedback.correct{background:linear-gradient(to top,rgba(34,197,94,.18),rgba(34,197,94,.05));border-top:1px solid rgba(34,197,94,.3)}
+.feedback.wrong{background:linear-gradient(to top,rgba(239,68,68,.18),rgba(239,68,68,.05));border-top:1px solid rgba(239,68,68,.3)}
+.feedback.annulled{background:linear-gradient(to top,rgba(107,122,153,.18),rgba(107,122,153,.05));border-top:1px solid rgba(107,122,153,.3)}
+.fb-icon{font-size:28px;flex-shrink:0}
+.fb-body{flex:1;min-width:0}
+.fb-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.fb-sub{font-size:13px;color:var(--muted)}
+.feedback.correct .fb-title{color:var(--green)}
+.feedback.wrong   .fb-title{color:var(--red)}
+.rationale-toggle{margin-top:8px;font-size:13px;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;background:none;border:none;padding:0;font-family:var(--ui)}
+.rationale-box{margin-top:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.6;display:none;max-height:160px;overflow-y:auto}
+.rationale-box.open{display:block}
+.siguiente-btn{margin-top:12px;padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;width:100%;font-family:var(--ui)}
+
+/* EXIT MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:480px}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.modal-sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.modal-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);margin-bottom:20px;line-height:1.5}
+.modal-actions{display:flex;flex-direction:column;gap:10px}
+
+/* IMAGE OVERLAY */
+.img-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.95);flex-direction:column;align-items:center;justify-content:flex-start;padding:0}
+.img-overlay.open{display:flex}
+.ov-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;flex-shrink:0}
+.ov-label{font-size:14px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.ov-close{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ov-img-wrap{flex:1;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:pinch-zoom}
+.ov-img{max-width:100%;max-height:100%;object-fit:contain;user-select:none}
+.ov-tabs{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap;justify-content:center;flex-shrink:0}
+.ov-tab{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s}
+.ov-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* RESULTS */
+#screen-results{align-items:center;justify-content:center;padding:32px 20px;text-align:center}
+.res-emoji{font-size:64px;margin-bottom:16px}
+.res-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.res-sub{color:var(--muted);font-size:15px;margin-bottom:32px}
+.res-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%;max-width:400px;margin-bottom:32px}
+.res-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 10px}
+.res-num{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.res-num.g{color:var(--green)}.res-num.r{color:var(--red)}.res-num.m{color:var(--muted)}
+.res-lbl{font-size:11px;color:var(--muted)}
+.ring-wrap{position:relative;width:140px;height:140px;margin:0 auto 24px}
+.ring-svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--surface2);stroke-width:10}
+.ring-fill{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-size:28px;font-weight:700}
+.ring-lbl-s{font-size:11px;color:var(--muted)}
+
+.annulled-notice{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted)}
+.loading{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:14px;opacity:0;transition:all .3s;pointer-events:none;z-index:300;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* CUSTOM TEST BAR */
+.test-bar{position:fixed;bottom:0;left:0;right:0;z-index:30;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border);display:none}
+.test-bar.visible{display:block}
+.test-bar-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);text-align:center;margin-bottom:8px}
+.test-bar-btns{display:flex;gap:8px}
+.test-btn{flex:1;padding:13px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;line-height:1.2}
+.test-btn:active{transform:scale(.97);border-color:var(--accent)}
+.test-btn span{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.test-btn.primary{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:var(--accent)}
+.test-btn.primary span{color:rgba(59,130,246,.6)}
+
+/* TEMA MODAL */
+.tema-modal-backdrop{display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center}
+.tema-modal-backdrop.open{display:flex}
+.tema-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column}
+.tema-modal-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.tema-modal-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.tema-scope-row{display:flex;gap:8px;margin-bottom:16px}
+.tema-scope-btn{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s}
+.tema-scope-btn.active{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:var(--accent)}
+.tema-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.tema-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s}
+.tema-item.selected{border-color:rgba(59,130,246,.5);background:rgba(59,130,246,.07)}
+.tema-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s}
+.tema-item.selected .tema-check{background:var(--accent);border-color:var(--accent);color:#fff}
+.tema-item-name{font-size:13px;font-weight:500;line-height:1.4}
+.tema-modal-start{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;font-family:var(--ui)}
+.tema-modal-start:disabled{opacity:.4;cursor:not-allowed}
+
+/* CUSTOM COUNT MODAL */
+.count-modal-backdrop{display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:24px}
+.count-modal-backdrop.open{display:flex}
+.count-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px 20px;width:100%;max-width:340px}
+.count-modal-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.count-modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.count-inp-wrap{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
+.count-adj{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.count-val{font-size:40px;font-weight:700;min-width:80px;text-align:center}
+.count-modal-btns{display:flex;gap:10px}
+.count-modal-btns button{flex:1;padding:12px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--ui)}
+
+/* DASHBOARD */
+#screen-dashboard{background:var(--bg);flex-direction:column}
+.dash-hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.dash-title{font-size:17px;font-weight:700}
+.dash-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 100px}
+.dash-section{margin-bottom:24px}
+.dash-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.stat-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px}
+.stat-card.accent{border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.06)}
+.stat-card.green{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06)}
+.stat-card.red{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)}
+.stat-card.yellow{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)}
+.stat-num{font-size:26px;font-weight:700;line-height:1;margin-bottom:3px}
+.stat-num.blue{color:var(--accent)}
+.stat-num.green{color:var(--green)}
+.stat-num.red{color:var(--red)}
+.stat-num.yellow{color:var(--yellow)}
+.stat-num.muted{color:var(--muted)}
+.stat-lbl{font-size:11px;color:var(--muted);line-height:1.4}
+.subj-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px}
+.subj-row-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.subj-name{font-size:13px;font-weight:600;flex:1;min-width:0;margin-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subj-pct{font-size:13px;font-weight:700;flex-shrink:0}
+.subj-pct.good{color:var(--green)}.subj-pct.mid{color:var(--yellow)}.subj-pct.bad{color:var(--red)}.subj-pct.none{color:var(--muted)}
+.subj-bar-bg{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:5px}
+.subj-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.subj-meta{font-size:11px;color:var(--muted)}
+.activity-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.activity-row-left{flex:1}
+.activity-row-label{font-size:14px;font-weight:600;margin-bottom:2px}
+.activity-row-meta{font-size:12px;color:var(--muted)}
+.activity-row-score{text-align:right;flex-shrink:0}
+.activity-score-num{font-size:20px;font-weight:700;line-height:1}
+.activity-score-lbl{font-size:11px;color:var(--muted)}
+.focus-card{background:var(--surface);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.focus-rank{width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,.15);color:var(--red);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.focus-name{flex:1;font-size:13px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.focus-pct{font-size:13px;font-weight:700;color:var(--red);flex-shrink:0}
+.coverage-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.coverage-bar-bg{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;margin:10px 0 6px}
+.coverage-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),#6366f1)}
+.coverage-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="screen-auth" class="screen active">
+  <div class="auth-logo">🩺</div>
+  <div class="auth-title">MIR Prep</div>
+  <div class="auth-sub">Prepara tu examen MIR</div>
+  <div class="auth-card">
+    <div class="tab-row">
+      <button class="tab active" onclick="setAuthMode('login')">Iniciar sesión</button>
+      <button class="tab" onclick="setAuthMode('register')">Registrarse</button>
+    </div>
+    <div class="lbl">Correo electrónico</div>
+    <input class="inp" type="email" id="auth-email" placeholder="tu@email.com" autocomplete="email">
+    <div class="lbl">Contraseña</div>
+    <input class="inp" type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn" id="auth-btn" onclick="handleAuth()">Entrar</button>
+    <div class="auth-err" id="auth-err"></div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="home-hdr">
+    <div class="home-row">
+      <div><div class="greeting">Bienvenido/a</div><div class="home-title">Exámenes MIR</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="sign-out" onclick="showScreen('dashboard');loadDashboard()">📊</button>
+        <button class="sign-out" onclick="openCalendar()">📅</button>
+        <button class="sign-out" onclick="signOut()">Salir</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:12px 16px 0;display:flex;gap:8px">
+    <button class="btn" style="flex:1;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:12px" onclick="openSimulacroModal()">⏱️ Simulacro MIR<span style="display:block;font-size:11px;font-weight:400;color:rgba(239,68,68,.7);margin-top:2px">210 preguntas · 4h 30min</span></button>
+  </div>
+  <div class="sec-title">Selecciona un examen</div>
+  <div class="exam-list" id="exam-list"><div class="empty">Cargando exámenes...</div></div>
+</div>
+
+<!-- TEST BAR -->
+<div class="test-bar" id="test-bar">
+  <div class="test-bar-label">Test Personalizado</div>
+  <div class="test-bar-btns">
+    <button class="test-btn" onclick="openTestModal(50)">50<span>preguntas</span></button>
+    <button class="test-btn primary" onclick="openTestModal(100)">100<span>preguntas</span></button>
+    <button class="test-btn" onclick="openCountModal()">N<span>elegir</span></button>
+    <button class="test-btn" onclick="launchImageTest()" style="color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08)">🖼️<span>imágenes</span></button>
+  </div>
+</div>
+
+<!-- TEMA SELECTION MODAL -->
+<div class="tema-modal-backdrop" id="tema-modal-backdrop" onclick="if(event.target===this)closeTestModal()">
+  <div class="tema-modal">
+    <div class="tema-modal-title" id="tema-modal-title">Test de 100 preguntas</div>
+    <div class="tema-modal-sub">¿Qué temas quieres incluir?</div>
+    <div class="tema-scope-row">
+      <button class="tema-scope-btn active" id="scope-all" onclick="setTemaScope('all')">Todos los temas</button>
+      <button class="tema-scope-btn" id="scope-select" onclick="setTemaScope('select')">Elegir temas</button>
+    </div>
+    <div class="tema-list" id="tema-list" style="display:none"></div>
+    <button class="tema-modal-start" id="tema-modal-start" onclick="launchCustomTest()">Empezar test</button>
+  </div>
+</div>
+
+<!-- CUSTOM COUNT MODAL -->
+<div class="count-modal-backdrop" id="count-modal-backdrop" onclick="if(event.target===this)closeCountModal()">
+  <div class="count-modal">
+    <div class="count-modal-title">¿Cuántas preguntas?</div>
+    <div class="count-modal-sub">Elige el número de preguntas para el test</div>
+    <div class="count-inp-wrap">
+      <button class="count-adj" onclick="adjustCount(-10)">−</button>
+      <div class="count-val" id="count-val">75</div>
+      <button class="count-adj" onclick="adjustCount(10)">+</button>
+    </div>
+    <div class="count-modal-btns">
+      <button class="btn ghost" onclick="closeCountModal()">Cancelar</button>
+      <button class="btn" onclick="confirmCount()">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen">
+  <div class="dash-hdr">
+    <button class="back-btn" onclick="showScreen('home');loadHome()">← Volver</button>
+    <div class="dash-title">Mi Progreso</div>
+  </div>
+  <div class="dash-scroll" id="dash-body">
+    <div class="empty" style="padding:60px 20px">Cargando estadísticas...</div>
+  </div>
+</div>
+
+<!-- FLAGGED QUESTIONS MODAL -->
+<div class="modal-backdrop" id="flagged-modal">
+  <div class="modal">
+    <div class="modal-title">🚩 Preguntas marcadas</div>
+    <div class="modal-sub">Tienes <strong><span id="flagged-count">0</span> preguntas marcadas</strong>. ¿Qué quieres hacer?</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="enterFlaggedReview()">Revisar preguntas marcadas</button>
+      <button class="btn ghost" onclick="markAllFlaggedUnattempted()">Marcar todas como no intentadas y completar</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLETE EXAM CONFIRM MODAL -->
+<div class="modal-backdrop" id="complete-modal">
+  <div class="modal">
+    <div class="modal-title" id="complete-modal-title">¿Completar el examen?</div>
+    <div class="modal-sub" id="complete-modal-sub">¿Estás seguro de que quieres completar?</div>
+    <div class="modal-actions">
+      <button class="btn" id="complete-modal-confirm" onclick="confirmComplete()">Sí, completar</button>
+      <button class="btn ghost" onclick="document.getElementById('complete-modal').classList.remove('open')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIMULACRO MODAL -->
+<div class="modal-backdrop" id="simulacro-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">⏱️ Modo Simulacro</div>
+    <div class="modal-sub">Replica las condiciones reales del MIR. Sin pausas, sin comentarios, con cuenta atrás. Selecciona el año del examen:</div>
+    <div id="simulacro-year-list" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:16px"></div>
+    <button class="btn" onclick="launchSimulacro()">Empezar simulacro</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="document.getElementById('simulacro-modal').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<!-- AI EXPLANATION MODAL -->
+<div class="modal-backdrop" id="ai-modal" onclick="if(event.target===this)closeAiModal()">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="modal-title" style="margin:0">💬 Explicación IA</div>
+      <button onclick="closeAiModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="ai-question-preview" style="font-size:13px;color:var(--muted);margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:8px;max-height:80px;overflow:hidden;line-height:1.5"></div>
+    <div id="ai-chat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;min-height:120px;max-height:280px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="ai-input" class="inp" style="flex:1;margin:0;font-size:14px;padding:10px 12px" placeholder="Pregunta algo sobre esta cuestión..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+      <button onclick="sendAiMessage()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0">↑</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDY CALENDAR SCREEN -->
+<div id="screen-calendar" class="screen" style="flex-direction:column">
+  <div class="dash-hdr">
+    <button class="back-btn" onclick="_goBack()">← Volver</button>
+    <div class="dash-title">📅 Plan de Estudio</div>
+  </div>
+  <div class="dash-scroll" id="cal-body">
+    <div style="padding:20px">
+      <div class="dash-section-title">¿Cuándo es tu examen?</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px">
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:8px">Fecha del examen MIR</label>
+        <input type="date" id="cal-date" class="inp" style="margin:0" onchange="saveExamDate(this.value)">
+      </div>
+      <div id="cal-plan"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXAM -->
+<div id="screen-exam" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="requestExit()">← Salir</button>
+    <button class="nav-btn" id="nav-prev" onclick="navPrev()" disabled>‹</button>
+    <div id="simulacro-clock" style="display:none;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--yellow);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:4px 10px;flex-shrink:0">4:30:00</div>
+    <div class="prog-wrap">
+      <div class="prog-lbl" id="prog-lbl">Pregunta 1 de 210</div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <button class="nav-btn" id="nav-next" onclick="navNext()" disabled>›</button>
+    <div class="score-chip" id="score-chip">✓ 0 &nbsp;✗ 0</div>
+  </div>
+  <div class="q-scroll" id="q-scroll">
+    <div class="reviewing-banner" id="reviewing-banner" style="display:none">
+      <span>Revisando pregunta anterior</span>
+      <button class="jump-btn" onclick="jumpToCurrent()">Pregunta actual →</button>
+    </div>
+    <div class="tema-tag" id="tema-tag" style="display:none"></div>
+    <div class="q-num-tag" id="q-tag">Pregunta 1</div>
+    <div class="q-text" id="q-text"></div>
+    <div class="opts" id="opts"></div>
+    <div id="action-btns" style="display:flex;gap:8px;margin:0 0 16px;padding:0 2px">
+      <button id="flag-btn" onclick="markFlagged()" style="flex:1;padding:11px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--yellow);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ui);transition:all .15s;opacity:0.5">🚩 Marcar</button>
+      <button id="unattempted-btn" onclick="markUnattempted()" style="flex:1;padding:11px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--ui);transition:all .15s">— No intentar</button>
+    </div>
+  </div>
+  <div class="feedback" id="feedback">
+    <div class="fb-icon" id="fb-icon"></div>
+    <div class="fb-body">
+      <div class="fb-title" id="fb-title"></div>
+      <div class="fb-sub" id="fb-sub"></div>
+      <button id="ai-btn" onclick="openAiModal()" style="display:none;margin-top:8px;font-size:13px;color:#a78bfa;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:var(--ui);width:100%;text-align:left">💬 Preguntar a la IA sobre esta pregunta</button>
+  <button class="rationale-toggle" id="rat-toggle" onclick="toggleRationale()" style="display:none">📖 Ver comentario</button>
+      <div class="rationale-box" id="rat-box"></div>
+      <button class="siguiente-btn" id="siguiente-btn" onclick="advanceFromWrong()" style="display:none">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="res-emoji" id="res-emoji">🏆</div>
+  <div class="res-title" id="res-title">¡Examen completado!</div>
+  <div class="res-sub" id="res-sub"></div>
+  <div class="ring-wrap">
+    <svg class="ring-svg" width="140" height="140" viewBox="0 0 140 140">
+      <circle class="ring-bg" cx="70" cy="70" r="60"/>
+      <circle class="ring-fill" id="ring-fill" cx="70" cy="70" r="60" stroke-dasharray="377" stroke-dashoffset="377"/>
+    </svg>
+    <div class="ring-txt"><div class="ring-pct" id="ring-pct">0%</div><div class="ring-lbl-s">aciertos</div></div>
+  </div>
+  <div class="res-grid">
+    <div class="res-cell"><div class="res-num g" id="res-c">0</div><div class="res-lbl">Correctas</div></div>
+    <div class="res-cell"><div class="res-num r" id="res-w">0</div><div class="res-lbl">Incorrectas</div></div>
+    <div class="res-cell"><div class="res-num m" id="res-s">0</div><div class="res-lbl">Anuladas</div></div>
+  </div>
+  <button class="btn" style="max-width:320px" onclick="goHome()">Volver al inicio</button>
+</div>
+
+<!-- EXIT MODAL -->
+<div class="modal-backdrop" id="exit-modal">
+  <div class="modal">
+    <div class="modal-title" id="exit-modal-title">¿Salir del examen?</div>
+    <div class="modal-sub">Tienes <span id="exit-answered">0</span> preguntas respondidas. ¿Qué quieres hacer?</div>
+    <div class="modal-actions" id="exit-modal-actions">
+      <button class="btn" id="exit-btn-resume" onclick="exitResume()">⏸ Guardar y continuar después</button>
+      <button class="btn ghost" onclick="exitPartial()">💾 Registrar intento parcial</button>
+      <button class="btn ghost" style="color:var(--red);border-color:rgba(239,68,68,.3)" onclick="showDiscardWarning()">✕ Descartar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DISCARD CONFIRM MODAL -->
+<div class="modal-backdrop" id="discard-modal">
+  <div class="modal">
+    <div class="modal-title">¿Descartar el intento?</div>
+    <div class="modal-warn">⚠️ Tus respuestas a las <strong><span id="discard-count">0</span> preguntas</strong> respondidas no quedarán registradas. Esta acción no se puede deshacer.</div>
+    <div class="modal-actions">
+      <button class="btn danger" onclick="exitDiscard()">Sí, descartar todo</button>
+      <button class="btn ghost" onclick="closeDiscard()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE OVERLAY -->
+<div class="img-overlay" id="img-overlay">
+  <div class="ov-header">
+    <div class="ov-label" id="ov-label">Imagen</div>
+    <button class="ov-close" onclick="closeImg()">✕</button>
+  </div>
+  <div class="ov-img-wrap" id="ov-wrap">
+    <img class="ov-img" id="ov-img" src="" alt="Imagen del examen" draggable="false">
+  </div>
+  <div class="ov-tabs" id="ov-tabs"></div>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-txt" id="loading-txt">Cargando...</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL  = 'https://epbolpgvgdztvtvhanxt.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYm9scGd2Z2R6dHZ0dmhhbnh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NjQ3OTgsImV4cCI6MjA5MTU0MDc5OH0.u-Ly4X0KMcEZfGpWz4OP9NnhAEsk-fOz5unkrMoTtfY';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// State
+let user = null;
+let exam = null;
+let questions = [];
+let idx = 0;          // current position (always the live unanswered question)
+let viewIdx = null;   // null = viewing current; number = reviewing a past question
+let attemptId = null;
+let customTestId = null;
+let prevScreen = 'home';
+let isSimulacro = false;
+let simulacroTimer = null;
+let simulacroSecsLeft = 0;
+let flaggedSet = new Set();    // question IDs flagged in current session
+let isReviewingFlagged = false; // true when in flagged-only review mode
+let answeredMap = {}; // {questionId: {selected, isCorrect, skipped}}
+let score = {c:0, w:0, s:0};
+let fbTimer = null;
+let authMode = 'login';
+let latestAttempts = {};
+
+// Init
+window.addEventListener('load', async () => {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) { user = session.user; showScreen('home'); loadHome(); }
+    else hideLoading();
+  } catch { hideLoading(); }
+});
+sb.auth.onAuthStateChange((_e, session) => {
+  if (!session && user) { user = null; showScreen('auth'); }
+});
+
+// ── Auth ──────────────────────────────────────────────────────
+function setAuthMode(m) {
+  authMode = m;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===(m==='login'?0:1)));
+  document.getElementById('auth-btn').textContent = m==='login' ? 'Entrar' : 'Crear cuenta';
+}
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-err');
+  errEl.textContent = ''; errEl.style.color = 'var(--red)';
+  if (!email || !pass) { errEl.textContent = 'Completa todos los campos'; return; }
+  if (pass.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; return; }
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const res = authMode === 'login'
+      ? await sb.auth.signInWithPassword({email, password: pass})
+      : await sb.auth.signUp({email, password: pass});
+    if (res.error) { errEl.textContent = res.error.message; return; }
+    if (authMode === 'register' && !res.data.session) {
+      errEl.style.color = 'var(--green)';
+      errEl.textContent = 'Revisa tu email para confirmar la cuenta.'; return;
+    }
+    user = res.data.user || res.data.session?.user;
+    showScreen('home'); loadHome();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Entrar' : 'Crear cuenta';
+  }
+}
+async function signOut() { await sb.auth.signOut(); showScreen('auth'); }
+
+// ── Home ──────────────────────────────────────────────────────
+async function loadHome() {
+  showLoading('Cargando exámenes...');
+  document.getElementById('test-bar').classList.add('visible');
+  try {
+    const { data: exams } = await sb.from('exams').select('*').order('year', {ascending:false});
+    const { data: attempts } = await sb.from('latest_attempts').select('*').eq('user_id', user.id);
+    latestAttempts = {};
+    (attempts||[]).forEach(a => { latestAttempts[a.exam_id] = a; });
+    renderExamList(exams || []);
+  } catch(e) { showToast('Error cargando exámenes'); console.error(e); }
+  finally { hideLoading(); }
+}
+
+function renderExamList(exams) {
+  const el = document.getElementById('exam-list');
+  if (!exams.length) { el.innerHTML = '<div class="empty">No hay exámenes disponibles todavía.</div>'; return; }
+  el.innerHTML = exams.map(ex => {
+    const att = latestAttempts[ex.id];
+    let scoreHtml = '<div class="score-num none">Sin intentos</div>';
+    let badgeHtml = '';
+    // canResume is ONLY true for in_progress — partial attempts start fresh
+    const canResume = att && att.status === 'in_progress';
+
+    if (att) {
+      if (att.status === 'in_progress') {
+        const done = (att.total_correct||0) + (att.total_incorrect||0);
+        scoreHtml = `<div class="score-num none">${done}/${ex.total_questions}</div><div class="score-lbl">respondidas</div>`;
+        badgeHtml = `<div class="att-badge resume">▶ Reanudar</div>`;
+      } else if (att.status === 'partial') {
+        const done = (att.total_correct||0) + (att.total_incorrect||0);
+        scoreHtml = `<div class="score-num none">${att.total_correct||0}/${done}</div><div class="score-lbl">correctas de las intentadas</div>`;
+        badgeHtml = `<div class="att-badge partial">Último intento: parcial</div>`;
+      } else if (att.status === 'complete') {
+        const pct = Math.round(att.score_pct||0);
+        const cls = pct>=70?'good':pct>=50?'mid':'bad';
+        scoreHtml = `<div class="score-num ${cls}">${pct}%</div><div class="score-lbl">${att.total_correct}/${att.total_answered} correctas</div>`;
+      }
+    }
+
+    return `<div class="exam-card" onclick="startExam('${ex.id}','${esc(ex.name)}',${ex.total_questions},${canResume?`'${att.id}'`:'null'})">
+      <div><div class="exam-name">${esc(ex.name)}</div><div class="exam-meta">${ex.total_questions} preguntas</div>${badgeHtml}</div>
+      <div class="score-area">${scoreHtml}</div>
+      <span class="chevron">›</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Start / Resume ────────────────────────────────────────────
+async function startExam(examId, examName, totalQ, existingAttemptId) {
+  showLoading('Cargando preguntas...');
+  try {
+    exam = {id:examId, name:examName, totalQ};
+    score = {c:0, w:0, s:0};
+    answeredMap = {};
+    viewIdx = null;
+    customTestId = null;
+    isReviewingFlagged = false;
+    flaggedSet = new Set();
+
+    const { data: qs, error } = await sb.from('questions').select('*')
+      .eq('exam_id', examId).order('number', {ascending:true});
+    if (error) throw error;
+    questions = qs || [];
+    if (!questions.length) { showToast('Este examen no tiene preguntas.'); return; }
+
+    if (existingAttemptId) {
+      // Resume in_progress attempt
+      const { data: prevAnswers } = await sb.from('question_attempts')
+        .select('question_id, selected_option, is_correct, skipped')
+        .eq('attempt_id', existingAttemptId);
+      (prevAnswers||[]).forEach(a => {
+        answeredMap[a.question_id] = {selected:a.selected_option, isCorrect:a.is_correct, skipped:a.skipped};
+        if (a.is_correct) score.c++;
+        else if (a.skipped) score.s++;
+        else score.w++;
+      });
+      attemptId = existingAttemptId;
+      await sb.from('attempts').update({status:'in_progress'}).eq('id', attemptId);
+      idx = questions.findIndex(q => !answeredMap[q.id]);
+      if (idx === -1) idx = questions.length;
+    } else {
+      // New attempt (always — partial attempts do not resume)
+      const { data: att, error: aErr } = await sb.from('attempts').insert({
+        user_id: user.id, exam_id: examId, status: 'in_progress',
+        total_answered:0, total_correct:0, total_incorrect:0, skipped:0
+      }).select().single();
+      if (aErr) throw aErr;
+      attemptId = att.id;
+      idx = 0;
+    }
+
+    prevScreen = 'home';
+    showScreen('exam');
+    renderQuestion();
+  } catch(e) { console.error(e); showToast('Error cargando el examen'); }
+  finally { hideLoading(); }
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function navPrev() {
+  if (isReviewingFlagged) {
+    if (idx <= 0) return;
+    idx--;
+    viewIdx = null;
+    renderQuestion();
+    return;
+  }
+  const pos = viewIdx !== null ? viewIdx : idx;
+  if (pos <= 0) return;
+  viewIdx = pos - 1;
+  renderQuestion();
+}
+
+function navNext() {
+  if (isReviewingFlagged) {
+    if (idx >= questions.length - 1) return;
+    idx++;
+    viewIdx = null;
+    renderQuestion();
+    return;
+  }
+  if (viewIdx === null) return;
+  const pos = viewIdx;
+  if (pos < idx - 1) {
+    viewIdx = pos + 1;
+  } else {
+    viewIdx = null;
+  }
+  renderQuestion();
+}
+
+function jumpToCurrent() {
+  viewIdx = null;
+  renderQuestion();
+}
+
+function updateNavButtons() {
+  const pos = viewIdx !== null ? viewIdx : idx;
+  const answeredCount = Object.keys(answeredMap).length;
+  if (isReviewingFlagged) {
+    // Free navigation through all flagged questions
+    document.getElementById('nav-prev').disabled = idx <= 0;
+    document.getElementById('nav-next').disabled = idx >= questions.length - 1;
+  } else {
+    document.getElementById('nav-prev').disabled = pos <= 0 || answeredCount === 0;
+    document.getElementById('nav-next').disabled = viewIdx === null;
+  }
+}
+
+// ── Question rendering ─────────────────────────────────────────
+function renderQuestion() {
+  const pos = viewIdx !== null ? viewIdx : idx;
+  if (pos >= questions.length) { finishExam(); return; }
+
+  const q = questions[pos];
+  const reviewing = viewIdx !== null;
+
+  // Reviewing banner
+  document.getElementById('reviewing-banner').style.display = (reviewing && !isSimulacro) ? 'flex' : 'none';
+  document.getElementById('nav-prev').style.visibility = isSimulacro ? 'hidden' : '';
+  document.getElementById('nav-next').style.visibility = isSimulacro ? 'hidden' : '';
+
+  // Progress — always reflects actual position in exam
+  document.getElementById('prog-lbl').textContent = isReviewingFlagged
+    ? `Revisando marcadas — Pregunta ${idx+1} de ${questions.length}`
+    : exam.isCustom ? `Test — Pregunta ${idx+1} de ${questions.length}` : `Pregunta ${idx+1} de ${questions.length}`;
+  document.getElementById('prog-fill').style.width = `${(idx/questions.length)*100}%`;
+  document.getElementById('score-chip').innerHTML = `✓ ${score.c} &nbsp;✗ ${score.w}`;
+  document.getElementById('q-tag').textContent = `Pregunta ${q.number}${reviewing ? ' (revisando)' : ''}`;
+
+  const temaEl = document.getElementById('tema-tag');
+  if (q.tema) { temaEl.textContent = q.tema; temaEl.style.display='inline-block'; }
+  else temaEl.style.display='none';
+
+  document.getElementById('q-text').innerHTML = formatQText(q.text, q.image_refs||[], q.image_urls||{});
+  document.getElementById('q-scroll').scrollTop = 0;
+  hideFeedback();
+  updateNavButtons();
+
+  const optsEl = document.getElementById('opts');
+  const prev = answeredMap[q.id];
+
+  // Action buttons visibility
+  const actionBtns = document.getElementById('action-btns');
+  const flagBtn = document.getElementById('flag-btn');
+  const unattemptedBtn = document.getElementById('unattempted-btn');
+
+  if (q.is_annulled) {
+    if (actionBtns) actionBtns.style.display = 'none';
+    optsEl.innerHTML = `<div class="annulled-notice">⚠️ Esta pregunta fue <strong>anulada</strong> en el examen oficial. No tiene respuesta correcta.</div>`;
+    if (!reviewing && !prev) {
+      saveAnswer(q, null, false, true);
+      score.s++;
+      updateScoreChip();
+      setTimeout(() => { idx++; renderQuestion(); }, 2500);
+    }
+    return;
+  }
+
+  if (reviewing && prev) {
+    // Show locked answered state — no interaction
+    if (actionBtns) actionBtns.style.display = 'none';
+    optsEl.innerHTML = [1,2,3,4].map(n => {
+      const txt = q[`option_${n}`] || ''; if (!txt) return '';
+      let cls = '';
+      if (!isSimulacro && n === q.correct_option) cls = 'correct';
+      else if (n === prev.selected && !prev.isCorrect) cls = 'wrong';
+      else cls = 'dimmed';
+      return `<button class="opt ${cls}" disabled>
+        <span class="opt-n">${n}</span><span>${esc(txt)}</span>
+      </button>`;
+    }).join('');
+    return;
+  }
+
+  // Show action buttons for unanswered questions (not in simulacro, not in review)
+  if (actionBtns) {
+    if (isSimulacro || reviewing) {
+      actionBtns.style.display = 'none';
+    } else {
+      actionBtns.style.display = 'flex';
+      // Update flag button state
+      const isFlagged = flaggedSet.has(q.id);
+      if (flagBtn) {
+        flagBtn.style.background = isFlagged ? 'rgba(245,158,11,.15)' : 'var(--surface2)';
+        flagBtn.style.borderColor = isFlagged ? 'rgba(245,158,11,.4)' : 'var(--border)';
+        flagBtn.textContent = isFlagged ? '🚩 Marcada' : '🚩 Marcar';
+      }
+      // In flagged review mode, hide flag button, show only unattempted
+      if (isReviewingFlagged && flagBtn) flagBtn.style.display = 'none';
+      else if (flagBtn) flagBtn.style.display = '';
+    }
+  }
+
+  // Normal unanswered question
+  optsEl.innerHTML = [1,2,3,4].map(n => {
+    const txt = q[`option_${n}`] || ''; if (!txt) return '';
+    return `<button class="opt" id="opt-${n}" onclick="selectOpt(${n})">
+      <span class="opt-n">${n}</span><span>${esc(txt)}</span>
+    </button>`;
+  }).join('');
+}
+
+function updateScoreChip() {
+  document.getElementById('score-chip').innerHTML = `✓ ${score.c} &nbsp;✗ ${score.w}`;
+}
+
+// ── Answer ────────────────────────────────────────────────────
+function selectOpt(chosen) {
+  if (viewIdx !== null) return; // can't answer while reviewing
+  const q = questions[idx];
+  if (!q || q.is_annulled) return;
+  const correct = q.correct_option;
+  // chosen=5 means unattempted — treat as wrong, show correct answer
+  const isUnattempted = chosen === 5;
+  const isCorrect = !isUnattempted && chosen === correct;
+
+  // Hide action buttons once answered
+  const actionBtns = document.getElementById('action-btns');
+  if (actionBtns) actionBtns.style.display = 'none';
+
+  // Remove from flagged set if it was flagged (DB flag cleared in saveAnswer)
+  flaggedSet.delete(q.id);
+
+  if (!isUnattempted) {
+    [1,2,3,4].forEach(n => {
+      const btn = document.getElementById(`opt-${n}`);
+      if (!btn) return;
+      btn.disabled = true;
+      if (n === correct) btn.classList.add('correct');
+      else if (n === chosen && !isCorrect) btn.classList.add('wrong');
+      else btn.classList.add('dimmed');
+    });
+  } else {
+    // Unattempted: disable all opts, highlight correct
+    [1,2,3,4].forEach(n => {
+      const btn = document.getElementById(`opt-${n}`);
+      if (!btn) return;
+      btn.disabled = true;
+      if (n === correct) btn.classList.add('correct');
+      else btn.classList.add('dimmed');
+    });
+  }
+
+  if (isCorrect) score.c++; else score.w++;
+  updateScoreChip();
+  answeredMap[q.id] = {selected:chosen, isCorrect};
+  saveAnswer(q, chosen, isCorrect, false);
+  updateNavButtons();
+
+  const fb = document.getElementById('feedback');
+  fb.className = `feedback ${isCorrect?'correct':'wrong'}`;
+  document.getElementById('fb-icon').textContent  = isCorrect ? '✅' : '❌';
+  document.getElementById('fb-title').textContent = isCorrect ? '¡Correcto!' : 'Incorrecto';
+  document.getElementById('fb-sub').textContent   = isCorrect
+    ? 'Muy bien, sigue así'
+    : `La respuesta correcta era la opción ${correct}`;
+
+  const ratBtn = document.getElementById('rat-toggle');
+  const ratBox = document.getElementById('rat-box');
+  const aiBtn  = document.getElementById('ai-btn');
+
+  if (isSimulacro) {
+    ratBtn.style.display = 'none';
+    if (aiBtn) aiBtn.style.display = 'none';
+    ratBox.classList.remove('open');
+    document.getElementById('siguiente-btn').style.display = 'none';
+    requestAnimationFrame(() => fb.classList.add('show'));
+    clearTimeout(fbTimer);
+    fbTimer = setTimeout(() => { idx++; viewIdx=null; renderQuestion(); }, 800);
+  } else {
+    if (q.rationale && q.rationale.length > 20) {
+      ratBtn.style.display = 'inline-flex';
+      ratBox.textContent = q.rationale;
+      ratBox.classList.remove('open');
+      ratBtn.textContent = '📖 Ver comentario';
+    } else {
+      ratBtn.style.display = 'none';
+      ratBox.classList.remove('open');
+    }
+    if (aiBtn) aiBtn.style.display = 'block';
+    const sigBtn = document.getElementById('siguiente-btn');
+    sigBtn.style.display = isCorrect ? 'none' : 'block';
+    requestAnimationFrame(() => fb.classList.add('show'));
+    if (isCorrect) {
+      clearTimeout(fbTimer);
+      fbTimer = setTimeout(() => { idx++; viewIdx=null; renderQuestion(); }, 1500);
+    }
+  }
+}
+
+function advanceFromWrong() {
+  clearTimeout(fbTimer);
+  document.getElementById('rat-box').classList.remove('open');
+  document.getElementById('rat-toggle').textContent = '📖 Ver comentario';
+  idx++; viewIdx = null;
+  renderQuestion();
+}
+
+function toggleRationale() {
+  const box    = document.getElementById('rat-box');
+  const toggle = document.getElementById('rat-toggle');
+  const isOpen = box.classList.toggle('open');
+  toggle.textContent = isOpen ? '✕ Cerrar comentario' : '📖 Ver comentario';
+  if (!isOpen) {
+    const q = questions[idx];
+    if (q && answeredMap[q.id]?.isCorrect) {
+      clearTimeout(fbTimer);
+      fbTimer = setTimeout(() => { idx++; viewIdx=null; renderQuestion(); }, 800);
+    }
+  } else {
+    clearTimeout(fbTimer);
+  }
+}
+
+function hideFeedback() {
+  clearTimeout(fbTimer);
+  const fb = document.getElementById('feedback');
+  fb.classList.remove('show');
+  fb.className = 'feedback';
+  document.getElementById('rat-toggle').style.display = 'none';
+  const _aiBtn = document.getElementById('ai-btn'); if (_aiBtn) _aiBtn.style.display = 'none';
+  document.getElementById('rat-box').classList.remove('open');
+  document.getElementById('siguiente-btn').style.display = 'none';
+}
+
+// ── Save ──────────────────────────────────────────────────────
+async function saveAnswer(q, selected, isCorrect, skipped) {
+  if (!attemptId && !customTestId) return;
+  try {
+    const record = {
+      question_id: q.id,
+      question_number: q.number,
+      selected_option: selected,
+      is_correct: isCorrect,
+      skipped: skipped,        // true only for annulled questions
+      flagged: false,          // clear flag when answered
+      answered_at: new Date().toISOString(),
+    };
+    if (customTestId) {
+      record.custom_test_id = customTestId;
+      await sb.from('question_attempts').insert(record);
+      const answered = score.c + score.w;
+      await sb.from('custom_tests').update({
+        total_correct: score.c,
+        total_incorrect: score.w,
+        total_skipped: score.s,
+        last_question_index: idx,
+      }).eq('id', customTestId);
+    } else {
+      record.attempt_id = attemptId;
+      await sb.from('question_attempts').upsert(record, {onConflict:'attempt_id,question_id'});
+      const answered = score.c + score.w;
+      await sb.from('attempts').update({
+        total_answered: answered,
+        total_correct: score.c,
+        total_incorrect: score.w,
+        skipped: score.s,
+        last_question_index: idx,
+      }).eq('id', attemptId);
+    }
+  } catch(e) {
+    console.error('saveAnswer failed:', e?.message || e);
+    if (e?.details) console.error('details:', e.details);
+  }
+}
+
+// ── Exit ──────────────────────────────────────────────────────
+function _goBack() {
+  if (prevScreen === 'dashboard') {
+    showScreen('dashboard');
+    loadDashboard();
+  } else {
+    showScreen('home');
+    loadHome();
+  }
+  prevScreen = 'home';
+}
+
+function requestExit() {
+  const answered = score.c + score.w;
+  document.getElementById('exit-answered').textContent = answered;
+  const resumeBtn = document.getElementById('exit-btn-resume');
+  const title = document.getElementById('exit-modal-title');
+  if (customTestId) {
+    resumeBtn.style.display = 'none';
+    title.textContent = '¿Salir del test?';
+  } else {
+    resumeBtn.style.display = '';
+    title.textContent = '¿Salir del examen?';
+  }
+  document.getElementById('exit-modal').classList.add('open');
+}
+function showDiscardWarning() {
+  document.getElementById('exit-modal').classList.remove('open');
+  document.getElementById('discard-count').textContent = score.c + score.w;
+  document.getElementById('discard-modal').classList.add('open');
+}
+
+async function exitResume() {
+  document.getElementById('exit-modal').classList.remove('open');
+  if (simulacroTimer) { clearInterval(simulacroTimer); simulacroTimer = null; isSimulacro = false; document.getElementById('simulacro-clock').style.display='none'; }
+  customTestId = null;
+  _goBack();
+}
+async function exitPartial() {
+  document.getElementById('exit-modal').classList.remove('open');
+  // If there are flagged questions, must resolve them first
+  if (flaggedSet.size > 0) {
+    document.getElementById('flagged-count').textContent = flaggedSet.size;
+    document.getElementById('flagged-modal').classList.add('open');
+    return;
+  }
+  const answered = score.c + score.w;
+  const pct = answered > 0 ? (score.c / answered) * 100 : 0;
+  try {
+    if (customTestId) {
+      await sb.from('custom_tests').update({
+        status:'partial', score_pct:pct,
+        total_correct:score.c, total_incorrect:score.w,
+        total_skipped:score.s,
+      }).eq('id', customTestId);
+      customTestId = null;
+    } else {
+      await sb.from('attempts').update({
+        status:'partial', score_pct:pct,
+        total_answered:answered, total_correct:score.c,
+        total_incorrect:score.w, skipped:score.s,
+      }).eq('id', attemptId);
+    }
+  } catch(e) { console.warn(e); }
+  _goBack();
+}
+function closeDiscard() {
+  document.getElementById('discard-modal').classList.remove('open');
+  document.getElementById('exit-modal').classList.add('open');
+}
+
+async function exitDiscard() {
+  document.getElementById('discard-modal').classList.remove('open');
+  try {
+    if (customTestId) {
+      await sb.from('custom_tests').delete().eq('id', customTestId);
+      customTestId = null;
+    } else {
+      await sb.from('attempts').delete().eq('id', attemptId);
+      attemptId = null;
+    }
+  } catch(e) { console.warn(e); }
+  _goBack();
+}
+
+// ── Finish ────────────────────────────────────────────────────
+async function finishExam() {
+  // If there are flagged questions, prompt user first
+  if (flaggedSet.size > 0 && !isReviewingFlagged) {
+    document.getElementById('flagged-count').textContent = flaggedSet.size;
+    document.getElementById('flagged-modal').classList.add('open');
+    return;
+  }
+  // After flagged review, check for any remaining unanswered
+  await doFinishExam();
+}
+
+async function doFinishExam() {
+  const answered = score.c + score.w;
+  const pct = answered > 0 ? (score.c / answered) * 100 : 0;
+  try {
+    if (customTestId) {
+      await sb.from('custom_tests').update({
+        status:'complete', score_pct:pct,
+        total_correct:score.c, total_incorrect:score.w,
+        total_skipped:score.s, completed_at:new Date().toISOString(),
+      }).eq('id', customTestId);
+    } else {
+      await sb.from('attempts').update({
+        status:'complete', completed_at:new Date().toISOString(),
+        total_answered:answered, total_correct:score.c,
+        total_incorrect:score.w, skipped:score.s, score_pct:pct,
+      }).eq('id', attemptId);
+    }
+  } catch(e) { console.warn(e); }
+  if (simulacroTimer) { clearInterval(simulacroTimer); simulacroTimer = null; document.getElementById('simulacro-clock').style.display='none'; }
+  isReviewingFlagged = false;
+  flaggedSet.clear();
+  showScreen('results');
+  document.getElementById('res-emoji').textContent = isSimulacro ? '⏱️' : '🏆';
+  document.getElementById('res-title').textContent = isSimulacro ? '¡Simulacro completado!' : '¡Examen completado!';
+  isSimulacro = false;
+  document.getElementById('res-c').textContent = score.c;
+  document.getElementById('res-w').textContent = score.w;
+  document.getElementById('res-s').textContent = score.s;
+  document.getElementById('ring-pct').textContent = `${Math.round(pct)}%`;
+  document.getElementById('res-emoji').textContent  = pct>=75?'🏆':pct>=50?'📚':'💪';
+  document.getElementById('res-title').textContent  = pct>=75?'¡Excelente resultado!':pct>=50?'Buen intento':'¡Sigue practicando!';
+  document.getElementById('res-sub').textContent    = `${exam?.name||'Examen'} completado`;
+  const ring = document.getElementById('ring-fill');
+  ring.style.stroke = pct>=70?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+  setTimeout(() => { ring.style.strokeDashoffset = 377-(pct/100)*377; }, 100);
+}
+function goHome() { showScreen('home'); loadHome(); }
+
+// ── Images ────────────────────────────────────────────────────
+function formatQText(text, imageRefs, imageUrls) {
+  if (!text) return '';
+  let html = esc(text);
+  // MIR 2025 style: (IMAGEN N) or (IMÁGENES Na y Nb)
+  html = html.replace(/\(IMÁGENES\s+([\w]+(?:\s+y\s+[\w]+)*)\)/gi, (_,refs) =>
+    buildImgRef(refs.split(/\s+y\s+/i).map(r=>r.trim().toLowerCase()), imageUrls));
+  html = html.replace(/\(IMAGEN\s+([\w]+(?:\s+y\s+[\w]+)*)\)/gi, (_,refs) =>
+    buildImgRef(refs.split(/\s+y\s+/i).map(r=>r.trim().toLowerCase()), imageUrls));
+  // MIR 2024 style: "Pregunta asociada a la imagen N" — use image_refs from DB
+  // If refs are populated but no parenthesised match was found, inject link from image_refs
+  if (imageRefs && imageRefs.length > 0 && !html.match(/🔬/)) {
+    html = html.replace(
+      /Pregunta asociada a la imagen \d+\.?/gi,
+      _ => buildImgRef(imageRefs.map(r=>String(r).toLowerCase()), imageUrls)
+    );
+  }
+  return html;
+}
+function buildImgRef(refs, imageUrls) {
+  const labels = refs.map(r=>`Imagen ${r.toUpperCase()}`).join(' y ');
+  const refsJ  = JSON.stringify(refs).replace(/"/g,'&quot;');
+  const urlsJ  = JSON.stringify(imageUrls||{}).replace(/"/g,'&quot;');
+  return `<a class="img-ref" href="#" onclick="event.preventDefault();openImg(${refsJ},${urlsJ})">🔬 ${labels}</a>`;
+}
+let ovRefs=[], ovUrls={};
+function openImg(refs, urls) {
+  ovRefs=refs; ovUrls=urls;
+  const tabs=document.getElementById('ov-tabs');
+  tabs.innerHTML = refs.length>1
+    ? refs.map(r=>`<button class="ov-tab" onclick="switchImg('${r}')">Imagen ${r.toUpperCase()}</button>`).join('')
+    : '';
+  switchImg(refs[0]);
+  document.getElementById('img-overlay').classList.add('open');
+}
+function switchImg(ref) {
+  const url=ovUrls[ref];
+  document.getElementById('ov-img').src = url||'';
+  document.getElementById('ov-label').textContent = `Imagen ${ref.toUpperCase()}`;
+  document.querySelectorAll('.ov-tab').forEach(t=>
+    t.classList.toggle('active', t.textContent===`Imagen ${ref.toUpperCase()}`));
+  if (!url) showToast('Imagen no disponible');
+}
+function closeImg() { document.getElementById('img-overlay').classList.remove('open'); }
+document.getElementById('img-overlay').addEventListener('click', function(e) {
+  if (e.target===this||e.target===document.getElementById('ov-wrap')) closeImg();
+});
+
+// ── Utilities ─────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  if (name!=='auth') hideLoading();
+  document.getElementById('test-bar').classList.toggle('visible', name==='home');
+}
+function showLoading(txt='Cargando...') {
+  document.getElementById('loading-txt').textContent=txt;
+  document.getElementById('loading').style.display='flex';
+}
+function hideLoading() { document.getElementById('loading').style.display='none'; }
+let toastT;
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),3000);
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Custom Test ────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 1: SIMULACRO
+// ═══════════════════════════════════════════════════════════════
+
+async function openSimulacroModal() {
+  const { data: exams } = await sb.from('exams')
+    .select('id, name, year, total_questions')
+    .eq('total_questions', 210)
+    .order('year', {ascending: false});
+  const list = document.getElementById('simulacro-year-list');
+  list.innerHTML = (exams||[]).map(ex => `
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer">
+      <input type="radio" name="simulacro-year" value="${ex.id}" style="accent-color:var(--accent);width:18px;height:18px">
+      <div>
+        <div style="font-size:15px;font-weight:600">${esc(ex.name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${ex.total_questions} preguntas</div>
+      </div>
+    </label>`).join('');
+  const first = list.querySelector('input[type=radio]');
+  if (first) first.checked = true;
+  document.getElementById('simulacro-modal').classList.add('open');
+}
+
+async function launchSimulacro() {
+  const selected = document.querySelector('input[name="simulacro-year"]:checked');
+  if (!selected) { showToast('Selecciona un año'); return; }
+  const examId   = selected.value;
+  const examName = selected.closest('label').querySelector('div div').textContent;
+  document.getElementById('simulacro-modal').classList.remove('open');
+  showLoading('Preparando simulacro...');
+  try {
+    const { data: qs } = await sb.from('questions')
+      .select('*').eq('exam_id', examId).order('number', {ascending:true});
+    if (!qs?.length) { showToast('No hay preguntas'); hideLoading(); return; }
+    const { data: att, error: attErr } = await sb.from('attempts').insert({
+      user_id: user.id, exam_id: examId, status: 'in_progress',
+      total_answered:0, total_correct:0, total_incorrect:0, skipped:0,
+    }).select().single();
+    if (attErr) throw attErr;
+    isSimulacro = true;
+    isReviewingFlagged = false;
+    flaggedSet = new Set();
+    exam = {id: examId, name: `Simulacro — ${examName}`, totalQ: qs.length};
+    questions = qs; score = {c:0,w:0,s:0}; answeredMap = {};
+    viewIdx = null; idx = 0; attemptId = att.id; customTestId = null; prevScreen = 'home';
+    simulacroSecsLeft = 16200;
+    startSimulacroTimer();
+    showScreen('exam'); renderQuestion();
+  } catch(e) { console.error(e); showToast('Error iniciando simulacro'); }
+  finally { hideLoading(); }
+}
+
+function startSimulacroTimer() {
+  const clock = document.getElementById('simulacro-clock');
+  clock.style.display = 'flex';
+  updateClockDisplay();
+  simulacroTimer = setInterval(() => {
+    simulacroSecsLeft--;
+    updateClockDisplay();
+    if (simulacroSecsLeft <= 0) {
+      clearInterval(simulacroTimer); simulacroTimer = null;
+      showToast('⏱️ Tiempo agotado'); finishExam();
+    }
+  }, 1000);
+}
+
+function updateClockDisplay() {
+  const h = Math.floor(simulacroSecsLeft/3600);
+  const m = Math.floor((simulacroSecsLeft%3600)/60);
+  const s = simulacroSecsLeft%60;
+  const clock = document.getElementById('simulacro-clock');
+  clock.textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const isLow = simulacroSecsLeft < 1800;
+  clock.style.color = isLow ? 'var(--red)' : 'var(--yellow)';
+  clock.style.borderColor = isLow ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)';
+  clock.style.background  = isLow ? 'rgba(239,68,68,.1)' : 'rgba(245,158,11,.1)';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 2: AI EXPLANATION
+// ═══════════════════════════════════════════════════════════════
+
+let aiChatHistory = [];
+
+function openAiModal() {
+  const q = questions[idx];
+  if (!q) return;
+  const prev = answeredMap[q.id];
+  document.getElementById('ai-question-preview').textContent =
+    (q.text||'').substring(0,150) + ((q.text||'').length>150?'…':'');
+  document.getElementById('ai-chat').innerHTML =
+    `<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted)">Hola, soy tu asistente. Puedo explicarte por qué cada opción es correcta o incorrecta, o ampliar el contexto clínico. ¿En qué puedo ayudarte?</div>`;
+  document.getElementById('ai-input').value = '';
+  document.getElementById('ai-modal').classList.add('open');
+  const correctOpt  = q[`option_${q.correct_option}`];
+  const prevSel     = prev?.selected ? q[`option_${prev.selected}`] : null;
+  aiChatHistory = [
+    {role:'user', content:`Contexto pregunta MIR:\nPregunta: ${q.text}\nOpciones:\n${[1,2,3,4].map(n=>`${n}. ${q[`option_${n}`]||''}`).join('\n')}\nRespuesta correcta: Opción ${q.correct_option} — ${correctOpt}${prevSel?`\nEl estudiante eligió: Opción ${prev.selected} — ${prevSel}`:''}\n${q.rationale?`Comentario oficial: ${q.rationale}`:''}\n\nResponde en español como tutor médico experto en MIR.`},
+    {role:'assistant', content:'Entendido, listo para explicar.'}
+  ];
+}
+
+function closeAiModal() {
+  document.getElementById('ai-modal').classList.remove('open');
+  aiChatHistory = [];
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById('ai-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const chat = document.getElementById('ai-chat');
+  chat.innerHTML += `<div style="align-self:flex-end;background:var(--accent);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 12px;font-size:13px;max-width:85%">${esc(msg)}</div>`;
+  const thinkId = 'think-' + Date.now();
+  chat.innerHTML += `<div id="${thinkId}" style="background:var(--surface2);border-radius:12px 12px 12px 2px;padding:8px 12px;font-size:13px;color:var(--muted);max-width:85%">✦ Pensando...</div>`;
+  chat.scrollTop = chat.scrollHeight;
+  aiChatHistory.push({role:'user', content:msg});
+  try {
+    // Get the current session token to authenticate with the Edge Function
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+    const resp = await fetch('https://epbolpgvgdztvtvhanxt.supabase.co/functions/v1/ai-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + token,
+        'apikey':        SUPABASE_ANON,
+      },
+      body: JSON.stringify({ messages: aiChatHistory }),
+    });
+    const data  = await resp.json();
+    console.log('AI response status:', resp.status, data);
+    if (!resp.ok) throw new Error(data.error || 'HTTP ' + resp.status);
+    const reply = data.reply || 'Sin respuesta.';
+    aiChatHistory.push({role:'assistant', content:reply});
+    const el = document.getElementById(thinkId);
+    if (el) { el.innerHTML = reply.replace(/\n/g,'<br>'); el.style.color='var(--text)'; }
+  } catch(e) {
+    console.error('AI fetch error:', e);
+    const el = document.getElementById(thinkId);
+    if (el) el.textContent = 'Error: ' + (e?.message || e?.toString() || 'desconocido') + ' — ¿Está desplegada la función?';
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 3: IMAGE TEST MODE
+// ═══════════════════════════════════════════════════════════════
+
+async function launchImageTest() {
+  showLoading('Preparando test de imágenes...');
+  try {
+    const { data: imageQs } = await sb.from('questions')
+      .select('id, is_annulled').not('image_refs','eq','{}').eq('is_annulled',false);
+    if (!imageQs?.length) { showToast('No hay preguntas con imágenes'); hideLoading(); return; }
+    const ids = imageQs.map(q=>q.id);
+    const { data: myAttempts } = await sb.from('attempts').select('id')
+      .eq('user_id',user.id).in('status',['complete','partial','in_progress']);
+    const { data: myTests } = await sb.from('custom_tests').select('id')
+      .eq('user_id',user.id).in('status',['complete','partial','in_progress']);
+    const aIds = (myAttempts||[]).map(a=>a.id);
+    const tIds = (myTests||[]).map(t=>t.id);
+    let wrongIds=new Set(), lastAt={};
+    const rows=[];
+    if (aIds.length) { const {data}=await sb.from('question_attempts').select('question_id,is_correct,answered_at').in('attempt_id',aIds).in('question_id',ids); rows.push(...(data||[])); }
+    if (tIds.length) { const {data}=await sb.from('question_attempts').select('question_id,is_correct,answered_at').in('custom_test_id',tIds).in('question_id',ids); rows.push(...(data||[])); }
+    const seenQ=new Set();
+    rows.sort((a,b)=>(a.answered_at||'').localeCompare(b.answered_at||''));
+    rows.forEach(r=>{ if(!seenQ.has(r.question_id)){seenQ.add(r.question_id); if(!r.is_correct)wrongIds.add(r.question_id); if(r.answered_at)lastAt[r.question_id]=r.answered_at; }});
+    const wrong=shuffle(imageQs.filter(q=>wrongIds.has(q.id)));
+    const never=shuffle(imageQs.filter(q=>!wrongIds.has(q.id)&&!lastAt[q.id]));
+    const old=imageQs.filter(q=>!wrongIds.has(q.id)&&lastAt[q.id]).sort((a,b)=>lastAt[a.id].localeCompare(lastAt[b.id]));
+    const finalIds=[...wrong,...never,...old].map(q=>q.id);
+    const {data:fullQs}=await sb.from('questions').select('*').in('id',finalIds);
+    const im={}; finalIds.forEach((id,i)=>im[id]=i);
+    const orderedQs=(fullQs||[]).sort((a,b)=>im[a.id]-im[b.id]);
+    const newCtId=crypto.randomUUID();
+    const {error:ctErr}=await sb.from('custom_tests').insert({id:newCtId,user_id:user.id,type:'custom_set',question_ids:finalIds,status:'in_progress',total_questions:orderedQs.length});
+    if(ctErr) throw new Error(ctErr.message);
+    customTestId=newCtId; isSimulacro=false; isReviewingFlagged=false; flaggedSet=new Set();
+    exam={id:null,name:`Test Imágenes (${orderedQs.length}Q)`,totalQ:orderedQs.length,isCustom:true};
+    questions=orderedQs; score={c:0,w:0,s:0}; answeredMap={}; viewIdx=null; idx=0; attemptId=null; prevScreen='home';
+    showScreen('exam'); renderQuestion();
+  } catch(e) { console.error(e); showToast('Error: '+(e?.message||'desconocido')); }
+  finally { hideLoading(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE 5: STUDY CALENDAR
+// ═══════════════════════════════════════════════════════════════
+
+
+async function startTemaTest(temaName) {
+  // Launch a test filtered to all questions in a specific tema
+  prevScreen = 'dashboard';
+  showLoading('Preparando test de ' + temaName + '...');
+  try {
+    const { data: temaQs } = await sb.from('questions')
+      .select('id, is_annulled')
+      .eq('tema', temaName)
+      .eq('is_annulled', false);
+
+    if (!temaQs?.length) { showToast('No hay preguntas para este tema'); hideLoading(); return; }
+
+    const ids = temaQs.map(q => q.id);
+    const { data: myAttempts } = await sb.from('attempts').select('id')
+      .eq('user_id', user.id).in('status', ['complete','partial','in_progress']);
+    const { data: myTests } = await sb.from('custom_tests').select('id')
+      .eq('user_id', user.id).in('status', ['complete','partial','in_progress']);
+
+    const aIds = (myAttempts||[]).map(a => a.id);
+    const tIds = (myTests||[]).map(t => t.id);
+    let wrongIds = new Set(), lastAt = {};
+    const rows = [];
+    if (aIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id,is_correct,answered_at')
+        .in('attempt_id', aIds).in('question_id', ids);
+      rows.push(...(data||[]));
+    }
+    if (tIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id,is_correct,answered_at')
+        .in('custom_test_id', tIds).in('question_id', ids);
+      rows.push(...(data||[]));
+    }
+    const seenQ = new Set();
+    rows.sort((a,b) => (a.answered_at||'').localeCompare(b.answered_at||''));
+    rows.forEach(r => {
+      if (!seenQ.has(r.question_id)) {
+        seenQ.add(r.question_id);
+        if (!r.is_correct) wrongIds.add(r.question_id);
+        if (r.answered_at) lastAt[r.question_id] = r.answered_at;
+      }
+    });
+
+    const wrong     = shuffle(temaQs.filter(q => wrongIds.has(q.id)));
+    const neverSeen = shuffle(temaQs.filter(q => !wrongIds.has(q.id) && !lastAt[q.id]));
+    const oldest    = temaQs
+      .filter(q => !wrongIds.has(q.id) && lastAt[q.id])
+      .sort((a,b) => lastAt[a.id].localeCompare(lastAt[b.id]));
+    const ordered   = [...wrong, ...neverSeen, ...oldest];
+    const finalIds  = ordered.map(q => q.id);
+
+    const { data: fullQs } = await sb.from('questions').select('*').in('id', finalIds);
+    const im = {}; finalIds.forEach((id,i) => im[id] = i);
+    const orderedQs = (fullQs||[]).sort((a,b) => im[a.id] - im[b.id]);
+
+    const newCtId = crypto.randomUUID();
+    const { error: ctErr } = await sb.from('custom_tests').insert({
+      id: newCtId, user_id: user.id, type: 'custom_set',
+      question_ids: finalIds, status: 'in_progress', total_questions: orderedQs.length,
+    });
+    if (ctErr) throw new Error(ctErr.message);
+    customTestId = newCtId; isSimulacro = false;
+    isReviewingFlagged = false;
+    flaggedSet = new Set();
+    exam = { id: null, name: 'Test — ' + temaName, totalQ: orderedQs.length, isCustom: true };
+    questions = orderedQs; score = {c:0,w:0,s:0}; answeredMap = {}; viewIdx = null; idx = 0; attemptId = null;
+    showScreen('exam'); renderQuestion();
+  } catch(e) {
+    console.error(e);
+    showToast('Error: ' + (e?.message || 'desconocido'));
+  } finally { hideLoading(); }
+}
+
+async function openCalendar() {
+  prevScreen = 'home';
+  showScreen('calendar');
+  const d = document.getElementById('cal-date');
+  if (!d.value && user) {
+    try {
+      const { data } = await sb.from('user_profiles')
+        .select('exam_date')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (data?.exam_date) d.value = data.exam_date;
+    } catch(e) { console.warn('Could not load exam date:', e); }
+  }
+  if (d.value) generateCalendar();
+}
+
+async function saveExamDate(dateStr) {
+  generateCalendar();
+  if (!user || !dateStr) return;
+  try {
+    await sb.from('user_profiles').upsert({
+      id: user.id,
+      exam_date: dateStr,
+    }, { onConflict: 'id' });
+  } catch(e) { console.warn('Could not save exam date:', e); }
+}
+
+async function generateCalendar() {
+  const dateStr = document.getElementById('cal-date').value;
+  if (!dateStr) return;
+  const examDate = new Date(dateStr);
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const daysLeft = Math.ceil((examDate - today)/(1000*60*60*24));
+  const planEl   = document.getElementById('cal-plan');
+  if (daysLeft <= 0) { planEl.innerHTML='<div class="empty">La fecha debe ser futura.</div>'; return; }
+  planEl.innerHTML='<div class="empty">Generando plan...</div>';
+  try {
+    const {data:allQs}=await sb.from('questions').select('id,tema_subject').eq('is_annulled',false);
+    const {data:myAttempts}=await sb.from('attempts').select('id').eq('user_id',user.id).in('status',['complete','partial']);
+    const {data:myTests}=await sb.from('custom_tests').select('id').eq('user_id',user.id).in('status',['complete','partial']);
+    const aIds=(myAttempts||[]).map(a=>a.id), tIds=(myTests||[]).map(t=>t.id);
+    let la={};
+    if(aIds.length){const{data}=await sb.from('question_attempts').select('question_id,is_correct,answered_at').in('attempt_id',aIds);(data||[]).forEach(r=>{if(!la[r.question_id]||r.answered_at>la[r.question_id].answered_at)la[r.question_id]=r;});}
+    if(tIds.length){const{data}=await sb.from('question_attempts').select('question_id,is_correct,answered_at').in('custom_test_id',tIds);(data||[]).forEach(r=>{if(!la[r.question_id]||r.answered_at>la[r.question_id].answered_at)la[r.question_id]=r;});}
+    const ss={};
+    (allQs||[]).forEach(q=>{const s=q.tema_subject||'Sin asignatura';if(!ss[s])ss[s]={total:0,attempted:0,correct:0};ss[s].total++;const r=la[q.id];if(r){ss[s].attempted++;if(r.is_correct)ss[s].correct++;}});
+    const subjects=Object.entries(ss).map(([name,s])=>{const acc=s.attempted>0?s.correct/s.attempted:0.5;const cov=s.attempted/s.total;return{name,priority:(1-acc)*.6+(1-cov)*.4,acc,total:s.total,attempted:s.attempted};}).sort((a,b)=>b.priority-a.priority);
+    const weeksLeft=Math.max(1,Math.floor(daysLeft/7));
+    const subPerWeek=Math.ceil(subjects.length/weeksLeft);
+    const qPerDay=Math.min(100,Math.max(20,Math.round(2000/Math.max(daysLeft,1))));
+    const simEvery=daysLeft>30?2:1;
+    let html=`<div class="dash-section"><div class="dash-section-title">Tu Plan</div>
+      <div class="stat-grid" style="margin-bottom:12px">
+        <div class="stat-card accent"><div class="stat-num blue">${daysLeft}</div><div class="stat-lbl">días hasta el examen</div></div>
+        <div class="stat-card"><div class="stat-num">${qPerDay}</div><div class="stat-lbl">preguntas/día recomendadas</div></div>
+      </div></div>
+      <div class="dash-section"><div class="dash-section-title">Plan Semanal</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Ordenado por prioridad (peor rendimiento primero)</div>`;
+    // Store subject names for onclick lookup
+    window._calSubjects = subjects.map(s => s.name);
+
+    subjects.forEach((s,i)=>{
+      const week=Math.floor(i/subPerWeek)+1;
+      const pct=s.attempted>0?Math.round(s.acc*100):null;
+      const cls=pct===null?'none':pct>=70?'good':pct>=50?'mid':'bad';
+      const isSimWeek=week%simEvery===0;
+      html+=`<button onclick="startSubjectTest(window._calSubjects[${i}])" style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:var(--ui);color:var(--text)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:700;color:var(--accent)">Semana ${week}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${isSimWeek?'<div style="font-size:11px;background:rgba(239,68,68,.1);color:var(--red);border-radius:4px;padding:2px 6px;font-weight:600">⏱️ +Simulacro</div>':''}
+            <span style="color:var(--muted);font-size:16px">›</span>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">${esc(s.name)}</div>
+        <div style="display:flex;justify-content:space-between">
+          <div style="font-size:12px;color:var(--muted)">${s.total} preguntas · Toca para practicar</div>
+          <div class="subj-pct ${cls}" style="font-size:12px">${pct===null?'Sin intentos':pct+'% acierto'}</div>
+        </div></button>`;
+    });
+    html+=`</div><div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:var(--r);padding:14px;margin-bottom:24px;font-size:13px;color:var(--muted);line-height:1.6">💡 <strong style="color:var(--text)">Consejo:</strong> Usa los tests personalizados por asignatura desde el Panel de Progreso para practicar cada tema.</div>`;
+    planEl.innerHTML=html;
+  } catch(e) { console.error(e); planEl.innerHTML=`<div class="empty">Error: ${e?.message||e}</div>`; }
+}
+
+
+// ── Custom Test & Dashboard (merged) ──
+
+// ── Custom Test ────────────────────────────────────────────────
+let customTestCount = 100;
+let customTestScope = 'all';     // 'all' | 'select'
+let selectedTemas = new Set();
+let allTemas = [];               // [{tema, subject}] from DB
+
+async function openTestModal(count) {
+  customTestCount = count;
+  customTestScope = 'all';
+  selectedTemas.clear();
+  document.getElementById('tema-modal-title').textContent = `Test de ${count} preguntas`;
+  setTemaScope('all');
+
+  // Load temas if not already loaded
+  if (!allTemas.length) {
+    try {
+      const { data } = await sb.from('questions')
+        .select('tema, tema_subject')
+        .not('tema', 'is', null)
+        .neq('tema', '')
+        .order('tema_subject', {ascending:true});
+      const seen = new Set();
+      allTemas = [];
+      (data||[]).forEach(r => {
+        const key = r.tema;
+        if (!seen.has(key)) { seen.add(key); allTemas.push({tema:r.tema, subject:r.tema_subject}); }
+      });
+    } catch(e) { console.error(e); }
+  }
+
+  renderTemaList();
+  document.getElementById('tema-modal-backdrop').classList.add('open');
+}
+
+function renderTemaList() {
+  // Group temas by subject
+  const bySubject = {};
+  allTemas.forEach(t => {
+    const s = t.subject || 'Sin asignatura';
+    if (!bySubject[s]) bySubject[s] = [];
+    bySubject[s].push(t);
+  });
+
+  const el = document.getElementById('tema-list');
+  let html = '';
+  Object.entries(bySubject).sort(([a],[b])=>a.localeCompare(b)).forEach(([subj, temas]) => {
+    html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 2px 4px">${esc(subj)}</div>`;
+    temas.forEach(t => {
+      const sel = selectedTemas.has(t.tema);
+      html += `<div class="tema-item${sel?' selected':''}" onclick="toggleTema('${esc(t.tema).replace(/'/g,"\\'")}')">
+        <div class="tema-check">${sel?'✓':''}</div>
+        <div class="tema-item-name">${esc(t.tema)}</div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+  updateTemaStartBtn();
+}
+
+function toggleTema(tema) {
+  if (selectedTemas.has(tema)) selectedTemas.delete(tema);
+  else selectedTemas.add(tema);
+  renderTemaList();
+}
+
+function setTemaScope(scope) {
+  customTestScope = scope;
+  document.getElementById('scope-all').classList.toggle('active', scope==='all');
+  document.getElementById('scope-select').classList.toggle('active', scope==='select');
+  document.getElementById('tema-list').style.display = scope==='select' ? 'flex' : 'none';
+  updateTemaStartBtn();
+}
+
+function updateTemaStartBtn() {
+  const btn = document.getElementById('tema-modal-start');
+  const ok = customTestScope === 'all' || selectedTemas.size > 0;
+  btn.disabled = !ok;
+  btn.textContent = ok
+    ? `Empezar test (${customTestCount} preguntas)`
+    : 'Selecciona al menos un tema';
+}
+
+function closeTestModal() {
+  document.getElementById('tema-modal-backdrop').classList.remove('open');
+}
+
+// Count modal
+function openCountModal() {
+  customTestCount = 75;
+  document.getElementById('count-val').textContent = 75;
+  document.getElementById('count-modal-backdrop').classList.add('open');
+}
+function closeCountModal() {
+  document.getElementById('count-modal-backdrop').classList.remove('open');
+}
+function adjustCount(delta) {
+  const el = document.getElementById('count-val');
+  customTestCount = Math.min(200, Math.max(10, (parseInt(el.textContent)||75) + delta));
+  el.textContent = customTestCount;
+}
+function confirmCount() {
+  closeCountModal();
+  openTestModal(customTestCount);
+}
+
+// ── Question selection logic ───────────────────────────────────
+async function launchCustomTest() {
+  document.getElementById('tema-modal-backdrop').classList.remove('open');
+  showLoading('Preparando test...');
+  try {
+    const N = customTestCount;
+    console.log('CT step 1: fetching questions');
+
+    // 1. Fetch candidate questions
+    // For specific temas, fetch all at once (small set).
+    // For all temas, fetch in pages of 500 to avoid payload limits.
+    let allQs = [];
+    if (customTestScope === 'select' && selectedTemas.size > 0) {
+      const { data, error: qErr } = await sb.from('questions')
+        .select('id, tema, tema_subject, is_annulled')
+        .in('tema', [...selectedTemas])
+        .eq('is_annulled', false)
+        .limit(2000);
+      if (qErr) throw new Error('questions fetch: ' + qErr.message);
+      allQs = data || [];
+    } else {
+      // Paginate through all questions in batches of 500
+      let page = 0, pageSize = 500, done = false;
+      while (!done) {
+        const { data, error: qErr } = await sb.from('questions')
+          .select('id, tema, tema_subject, is_annulled')
+          .eq('is_annulled', false)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        if (qErr) throw new Error('questions fetch p' + page + ': ' + qErr.message);
+        if (!data || data.length < pageSize) done = true;
+        allQs.push(...(data || []));
+        page++;
+        if (page > 6) done = true; // safety cap at 3000 questions
+      }
+      allQs = allQs.filter(q => !q.is_annulled);
+    }
+    if (!allQs.length) { showToast('No hay preguntas para estos temas'); hideLoading(); return; }
+    console.log('CT step 1 done:', allQs.length, 'questions');
+
+    console.log('CT step 2: fetching attempt history');
+    const { data: myAttempts, error: aErr } = await sb.from('attempts')
+      .select('id').eq('user_id', user.id)
+      .in('status', ['complete', 'partial', 'in_progress']);
+    if (aErr) throw new Error('attempts fetch: ' + aErr.message);
+    const myAttemptIds = (myAttempts||[]).map(a => a.id);
+    console.log('CT step 2a done:', myAttemptIds.length, 'exam attempts');
+
+    const { data: myTests, error: tErr } = await sb.from('custom_tests')
+      .select('id').eq('user_id', user.id)
+      .in('status', ['complete', 'partial']);
+    if (tErr) throw new Error('custom_tests fetch: ' + tErr.message);
+    const myTestIds = (myTests||[]).map(t => t.id);
+    console.log('CT step 2b done:', myTestIds.length, 'custom tests');
+
+    let wrongQIds = new Set();
+    let lastAnsweredAt = {};
+
+    const allAttemptRows = [];
+    if (myAttemptIds.length) {
+      console.log('CT step 2c: fetching exam question_attempts');
+      const { data: rows, error: qaErr } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('attempt_id', myAttemptIds)
+        .order('answered_at', {ascending: false})
+        .limit(5000);
+      if (qaErr) throw new Error('question_attempts(exam) fetch: ' + qaErr.message);
+      allAttemptRows.push(...(rows||[]));
+      console.log('CT step 2c done:', (rows||[]).length, 'rows');
+    }
+    if (myTestIds.length) {
+      console.log('CT step 2d: fetching test question_attempts');
+      const { data: rows, error: qaErr2 } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('custom_test_id', myTestIds)
+        .order('answered_at', {ascending: false})
+        .limit(5000);
+      if (qaErr2) throw new Error('question_attempts(test) fetch: ' + qaErr2.message);
+      allAttemptRows.push(...(rows||[]));
+      console.log('CT step 2d done:', (rows||[]).length, 'rows');
+    }
+
+    // Per question keep only most recent attempt
+    allAttemptRows.sort((a,b) => (b.answered_at||'').localeCompare(a.answered_at||''));
+    const seenQ = new Set();
+    allAttemptRows.forEach(qa => {
+      if (!seenQ.has(qa.question_id)) {
+        seenQ.add(qa.question_id);
+        if (!qa.is_correct) wrongQIds.add(qa.question_id);
+        if (qa.answered_at) lastAnsweredAt[qa.question_id] = qa.answered_at;
+      }
+    });
+
+    // 3. Group questions by tema
+    const byTema = {};
+    allQs.forEach(q => {
+      const t = q.tema || 'Sin tema';
+      if (!byTema[t]) byTema[t] = [];
+      byTema[t].push(q);
+    });
+    const temas = Object.keys(byTema);
+    const nTemas = temas.length;
+
+    // 4. Allocate slots per tema — divide N evenly, spread remainder round-robin
+    const baseSlots = Math.floor(N / nTemas);
+    let remainder   = N % nTemas;
+    const slots = {};
+    temas.forEach(t => { slots[t] = baseSlots; });
+    // Give remainder slots to temas with the most questions available (most room)
+    temas.slice().sort((a,b) => byTema[b].length - byTema[a].length)
+         .slice(0, remainder)
+         .forEach(t => { slots[t]++; });
+
+    // 5. Within each tema, fill slots using priority: wrong → never seen → oldest first
+    const selected = [];
+    const overflow = []; // questions from temas that couldn't fill their slot
+
+    temas.forEach(t => {
+      const qs = byTema[t];
+      const wrong      = shuffle(qs.filter(q => wrongQIds.has(q.id)));
+      const neverSeen  = shuffle(qs.filter(q => !wrongQIds.has(q.id) && !lastAnsweredAt[q.id]));
+      const oldest     = qs.filter(q => !wrongQIds.has(q.id) && lastAnsweredAt[q.id])
+                           .sort((a,b) => lastAnsweredAt[a.id].localeCompare(lastAnsweredAt[b.id]));
+      const ordered    = [...wrong, ...neverSeen, ...oldest];
+      const alloc      = slots[t];
+      selected.push(...ordered.slice(0, alloc));
+      // If we couldn't fill the slot, note how many are missing (not needed — overflow fills from others)
+      // If we have extras beyond alloc, add to overflow pool for redistribution
+      overflow.push(...ordered.slice(alloc));
+    });
+
+    // 6. If selected < N (some temas didn't have enough questions), fill from overflow
+    if (selected.length < N && overflow.length) {
+      // Overflow is already prioritised within each tema; shuffle so no tema dominates the fill
+      shuffle(overflow);
+      selected.push(...overflow.slice(0, N - selected.length));
+    }
+
+    // Final cap at N
+    const finalSelected = selected.slice(0, N);
+
+    if (!finalSelected.length) { showToast('No hay preguntas disponibles'); hideLoading(); return; }
+
+    // 7. Fetch full question data
+    const selectedIds = finalSelected.map(q => q.id);
+    const { data: fullQs } = await sb.from('questions').select('*').in('id', selectedIds);
+
+    // Preserve prioritised order
+    const idxMap = {};
+    selectedIds.forEach((id,i) => idxMap[id] = i);
+    const orderedQs = (fullQs||[]).sort((a,b) => idxMap[a.id] - idxMap[b.id]);
+
+    // 8. Create custom_test record
+    console.log('CT step 8: inserting custom_test, questions:', selectedIds.length);
+    const newCtId = crypto.randomUUID();
+    const { error: ctErr } = await sb.from('custom_tests').insert({
+      id: newCtId,
+      user_id: user.id,
+      type: 'custom_set',
+      question_ids: selectedIds,
+      status: 'in_progress',
+      total_questions: finalSelected.length,
+    });
+    if (ctErr) throw new Error('custom_tests insert: ' + ctErr.message);
+    console.log('CT step 8 done');
+    customTestId = newCtId;
+
+    // 9. Launch exam screen
+    const temaLabel = customTestScope === 'all'
+      ? 'todos los temas'
+      : `${selectedTemas.size} tema${selectedTemas.size>1?'s':''}`;
+    isReviewingFlagged = false;
+    flaggedSet = new Set();
+    exam = {id: null, name: `Test ${orderedQs.length}Q — ${temaLabel}`, totalQ: orderedQs.length, isCustom: true};
+    questions = orderedQs;
+    score = {c:0, w:0, s:0};
+    answeredMap = {};
+    viewIdx = null;
+    idx = 0;
+    attemptId = null;
+
+    showScreen('exam');
+    renderQuestion();
+  } catch(e) {
+    console.error('Custom test error:', e);
+    const msg = e?.message || e?.toString() || 'desconocido';
+    showToast('Error: ' + msg.substring(0, 80));
+  } finally { hideLoading(); }
+}
+
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ── Dashboard ──────────────────────────────────────────────────
+async function startSubjectTest(subjectName) {
+  // Launch a custom test pre-filtered to all temas in this subject
+  // Reuse the custom test flow but bypass the modal entirely
+  showLoading('Preparando test de ' + subjectName + '...');
+  try {
+    const { data: subjectQs } = await sb.from('questions')
+      .select('id, tema_subject, is_annulled')
+      .eq('tema_subject', subjectName)
+      .eq('is_annulled', false);
+
+    if (!subjectQs || !subjectQs.length) {
+      showToast('No hay preguntas para esta asignatura');
+      hideLoading();
+      return;
+    }
+
+    // Set custom test state so launchCustomTest-style logic works
+    // We'll do a simplified direct launch — no tema modal needed
+    const selectedIds = subjectQs.map(q => q.id);
+
+    // Fetch user's attempt history for these questions
+    const { data: myAttempts } = await sb.from('attempts')
+      .select('id').eq('user_id', user.id)
+      .in('status', ['complete', 'partial', 'in_progress']);
+    const { data: myTests } = await sb.from('custom_tests')
+      .select('id').eq('user_id', user.id)
+      .in('status', ['complete', 'partial', 'in_progress']);
+
+    const attemptIds = (myAttempts||[]).map(a => a.id);
+    const testIds    = (myTests||[]).map(t => t.id);
+
+    let wrongQIds = new Set();
+    let lastAnsweredAt = {};
+
+    const allAttemptRows = [];
+    if (attemptIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('attempt_id', attemptIds)
+        .in('question_id', selectedIds);
+      allAttemptRows.push(...(data||[]));
+    }
+    if (testIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('custom_test_id', testIds)
+        .in('question_id', selectedIds);
+      allAttemptRows.push(...(data||[]));
+    }
+
+    const seenQ = new Set();
+    allAttemptRows.sort((a,b) => (a.answered_at||'').localeCompare(b.answered_at||''));
+    allAttemptRows.forEach(qa => {
+      if (!seenQ.has(qa.question_id)) {
+        seenQ.add(qa.question_id);
+        if (!qa.is_correct) wrongQIds.add(qa.question_id);
+        if (qa.answered_at) lastAnsweredAt[qa.question_id] = qa.answered_at;
+      }
+    });
+
+    // Priority order: wrong → never seen → oldest first
+    const wrong     = shuffle(subjectQs.filter(q => wrongQIds.has(q.id)));
+    const neverSeen = shuffle(subjectQs.filter(q => !wrongQIds.has(q.id) && !lastAnsweredAt[q.id]));
+    const oldest    = subjectQs
+      .filter(q => !wrongQIds.has(q.id) && lastAnsweredAt[q.id])
+      .sort((a,b) => lastAnsweredAt[a.id].localeCompare(lastAnsweredAt[b.id]));
+
+    const ordered = [...wrong, ...neverSeen, ...oldest].slice(0, 100);
+    const finalIds = ordered.map(q => q.id);
+
+    // Fetch full question data
+    const { data: fullQs } = await sb.from('questions').select('*').in('id', finalIds);
+    const idxMap = {};
+    finalIds.forEach((id,i) => idxMap[id] = i);
+    const orderedQs = (fullQs||[]).sort((a,b) => idxMap[a.id] - idxMap[b.id]);
+
+    // Create custom_test record
+    const newCtId = crypto.randomUUID();
+    const { error: ctErr } = await sb.from('custom_tests').insert({
+      id: newCtId,
+      user_id: user.id,
+      type: 'custom_set',
+      question_ids: finalIds,
+      status: 'in_progress',
+      total_questions: orderedQs.length,
+    });
+    if (ctErr) throw new Error('custom_tests insert: ' + ctErr.message);
+    customTestId = newCtId;
+    isReviewingFlagged = false;
+    flaggedSet = new Set();
+
+    exam = {id: null, name: `Test — ${subjectName}`, totalQ: orderedQs.length, isCustom: true};
+    questions = orderedQs;
+    score = {c:0, w:0, s:0};
+    answeredMap = {};
+    viewIdx = null;
+    idx = 0;
+    attemptId = null;
+
+    prevScreen = 'dashboard';
+    showScreen('exam');
+    renderQuestion();
+  } catch(e) {
+    console.error('Subject test error:', e);
+    showToast('Error: ' + (e?.message || 'desconocido'));
+  } finally { hideLoading(); }
+}
+
+
+async function loadDashboard() {
+  const body = document.getElementById('dash-body');
+  body.innerHTML = '<div class="empty" style="padding:60px 20px">Cargando estadísticas...</div>';
+  showLoading('Cargando estadísticas...');
+  try {
+    // ── Fetch all data in parallel ──────────────────────────────
+
+    // 1. All questions (id, tema_subject, correct_option, is_annulled)
+    const { data: allQs } = await sb.from('questions')
+      .select('id, tema_subject, correct_option, is_annulled')
+      .eq('is_annulled', false);
+
+    // 2. User's exam attempts
+    const { data: myAttempts } = await sb.from('attempts')
+      .select('id, exam_id, status, score_pct, total_correct, total_answered')
+      .eq('user_id', user.id)
+      .in('status', ['complete', 'partial']);
+
+    // 3. User's custom test attempts
+    const { data: myTests } = await sb.from('custom_tests')
+      .select('id, status, score_pct, total_correct')
+      .eq('user_id', user.id)
+      .in('status', ['complete', 'partial']);
+
+    // 4. All question_attempts for this user (via exam attempts)
+    const attemptIds = (myAttempts||[]).map(a => a.id);
+    const testIds    = (myTests||[]).map(t => t.id);
+
+    let qaFromExams = [], qaFromTests = [];
+
+    if (attemptIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('attempt_id', attemptIds);
+      qaFromExams = data || [];
+    }
+    if (testIds.length) {
+      const { data } = await sb.from('question_attempts')
+        .select('question_id, is_correct, answered_at')
+        .in('custom_test_id', testIds);
+      qaFromTests = data || [];
+    }
+
+    const allQA = [...qaFromExams, ...qaFromTests];
+
+    // ── Build per-question last-attempt lookup ──────────────────
+    // For each question, keep only most recent attempt
+    const lastAttempt = {}; // qId -> {is_correct, answered_at}
+    allQA.sort((a,b) => (a.answered_at||'').localeCompare(b.answered_at||''));
+    allQA.forEach(qa => {
+      lastAttempt[qa.question_id] = { is_correct: qa.is_correct, answered_at: qa.answered_at };
+    });
+
+    const attemptedIds = new Set(Object.keys(lastAttempt));
+
+    // ── Build subject stats ─────────────────────────────────────
+    const subjectStats = {}; // subject -> {total, attempted, correct}
+    (allQs||[]).forEach(q => {
+      const s = q.tema_subject || 'Sin asignatura';
+      if (!subjectStats[s]) subjectStats[s] = {total:0, attempted:0, correct:0};
+      subjectStats[s].total++;
+      if (attemptedIds.has(q.id)) {
+        subjectStats[s].attempted++;
+        if (lastAttempt[q.id].is_correct) subjectStats[s].correct++;
+      }
+    });
+
+    // ── Overall stats ───────────────────────────────────────────
+    const totalQs       = (allQs||[]).length;
+    const totalAttempted = attemptedIds.size;
+    const totalCorrect  = Object.values(lastAttempt).filter(a => a.is_correct).length;
+    const overallPct    = totalAttempted > 0 ? Math.round(totalCorrect / totalAttempted * 100) : null;
+    const coveragePct   = totalQs > 0 ? Math.round(totalAttempted / totalQs * 100) : 0;
+
+    // Exam stats
+    const examsComplete  = (myAttempts||[]).filter(a => a.status === 'complete');
+    const examsPartial   = (myAttempts||[]).filter(a => a.status === 'partial');
+    const avgExamPct     = examsComplete.length
+      ? Math.round(examsComplete.reduce((s,a) => s + (a.score_pct||0), 0) / examsComplete.length)
+      : null;
+    const avgPartialPct  = examsPartial.length
+      ? Math.round(examsPartial.reduce((s,a) => s + (a.score_pct||0), 0) / examsPartial.length)
+      : null;
+
+    // Test stats — only complete/partial for score averages
+    const testsComplete  = (myTests||[]).filter(t => t.status === 'complete');
+    const testsPartial   = (myTests||[]).filter(t => t.status === 'partial');
+    const avgTestPct     = testsComplete.length
+      ? Math.round(testsComplete.reduce((s,t) => s + (t.score_pct||0), 0) / testsComplete.length)
+      : null;
+    const avgTestPartialPct = testsPartial.length
+      ? Math.round(testsPartial.reduce((s,t) => s + (t.score_pct||0), 0) / testsPartial.length)
+      : null;
+
+    // Tema frequency — count distinct exam years per tema
+    const { data: temaData } = await sb.from('questions')
+      .select('id, tema, source_year').not('tema','is',null).neq('tema','').eq('is_annulled',false);
+    const temaYears = {}, temaCorrect = {};
+    (temaData||[]).forEach(q => {
+      if (!temaYears[q.tema]) temaYears[q.tema] = new Set();
+      temaYears[q.tema].add(q.source_year);
+      if (!temaCorrect[q.tema]) temaCorrect[q.tema] = {correct:0,attempted:0};
+      const la = lastAttempt[q.id];
+      if (la) { temaCorrect[q.tema].attempted++; if (la.is_correct) temaCorrect[q.tema].correct++; }
+    });
+    const topTemas = Object.entries(temaYears)
+      .map(([tema,years]) => ({tema, years:years.size, yearList:[...years].sort(),
+        acc: temaCorrect[tema]?.attempted>0 ? Math.round(temaCorrect[tema].correct/temaCorrect[tema].attempted*100) : null,
+        attempted: temaCorrect[tema]?.attempted||0}))
+      .sort((a,b)=>b.years-a.years).slice(0,15);
+
+    // Weakest subjects (min 5 attempted, sort by % correct ascending)
+    const weakSubjects = Object.entries(subjectStats)
+      .filter(([,s]) => s.attempted >= 1)
+      .map(([name, s]) => ({name, pct: Math.round(s.correct / s.attempted * 100)}))
+      .sort((a,b) => a.pct - b.pct)
+      .slice(0, 3);
+
+    // Store tema names for onclick lookup (avoids HTML-encoding issues)
+    window._dashTemas = topTemas.map(t => t.tema);
+
+    // Subjects sorted alphabetically for the main table
+    const subjectList = Object.entries(subjectStats)
+      .sort(([a],[b]) => a.localeCompare(b));
+    // Store subject names in a window map so onclick can look them up by index
+    // (avoids HTML-escaping issues with & in subject names)
+    window._dashSubjects = subjectList.map(([name]) => name);
+
+    // ── Render ──────────────────────────────────────────────────
+    body.innerHTML = `
+
+      <!-- Overall headline stats -->
+      <div class="dash-section">
+        <div class="dash-section-title">Resumen General</div>
+        <div class="stat-grid">
+          <div class="stat-card accent">
+            <div class="stat-num blue">${totalAttempted.toLocaleString()}</div>
+            <div class="stat-lbl">preguntas intentadas de ${totalQs.toLocaleString()}</div>
+          </div>
+          <div class="stat-card ${overallPct===null?'':overallPct>=70?'green':overallPct>=50?'yellow':'red'}">
+            <div class="stat-num ${overallPct===null?'muted':overallPct>=70?'green':overallPct>=50?'yellow':'red'}">${overallPct===null?'—':overallPct+'%'}</div>
+            <div class="stat-lbl">precisión global (último intento)</div>
+          </div>
+        </div>
+        <div class="coverage-bar-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:13px;font-weight:600">Cobertura del banco</span>
+            <span style="font-size:18px;font-weight:700;color:var(--accent)">${coveragePct}%</span>
+          </div>
+          <div class="coverage-bar-bg">
+            <div class="coverage-bar-fill" style="width:${coveragePct}%"></div>
+          </div>
+          <div class="coverage-labels">
+            <span>${totalAttempted.toLocaleString()} intentadas</span>
+            <span>${(totalQs - totalAttempted).toLocaleString()} sin intentar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exam & test activity -->
+      <div class="dash-section">
+        <div class="dash-section-title">Exámenes</div>
+        <div class="activity-row">
+          <div class="activity-row-left">
+            <div class="activity-row-label">✅ Completados</div>
+            <div class="activity-row-meta">${examsComplete.length} examen${examsComplete.length!==1?'es':''}</div>
+          </div>
+          <div class="activity-row-score">
+            <div class="activity-score-num ${avgExamPct===null?'':avgExamPct>=70?'green':avgExamPct>=50?'yellow':'red'}" style="color:${avgExamPct===null?'var(--muted)':avgExamPct>=70?'var(--green)':avgExamPct>=50?'var(--yellow)':'var(--red)'}">${avgExamPct===null?'—':avgExamPct+'%'}</div>
+            <div class="activity-score-lbl">media correctas</div>
+          </div>
+        </div>
+        <div class="activity-row">
+          <div class="activity-row-left">
+            <div class="activity-row-label">⏸ Parciales</div>
+            <div class="activity-row-meta">${examsPartial.length} examen${examsPartial.length!==1?'es':''}</div>
+          </div>
+          <div class="activity-row-score">
+            <div class="activity-score-num" style="color:var(--muted)">${avgPartialPct===null?'—':avgPartialPct+'%'}</div>
+            <div class="activity-score-lbl">media correctas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-title">Tests Personalizados</div>
+        <div class="activity-row">
+          <div class="activity-row-left">
+            <div class="activity-row-label">✅ Completados</div>
+            <div class="activity-row-meta">${testsComplete.length} test${testsComplete.length!==1?'s':''}</div>
+          </div>
+          <div class="activity-row-score">
+            <div class="activity-score-num ${avgTestPct===null?'':avgTestPct>=70?'green':avgTestPct>=50?'yellow':'red'}" style="color:${avgTestPct===null?'var(--muted)':avgTestPct>=70?'var(--green)':avgTestPct>=50?'var(--yellow)':'var(--red)'}">${avgTestPct===null?'—':avgTestPct+'%'}</div>
+            <div class="activity-score-lbl">media correctas</div>
+          </div>
+        </div>
+        <div class="activity-row">
+          <div class="activity-row-left">
+            <div class="activity-row-label">⏸ Parciales</div>
+            <div class="activity-row-meta">${testsPartial.length} test${testsPartial.length!==1?'s':''}</div>
+          </div>
+          <div class="activity-row-score">
+            <div class="activity-score-num" style="color:var(--muted)">${avgTestPartialPct===null?'—':avgTestPartialPct+'%'}</div>
+            <div class="activity-score-lbl">media correctas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weakest subjects -->
+      ${weakSubjects.length ? `
+      <div class="dash-section">
+        <div class="dash-section-title">⚠️ Áreas a reforzar</div>
+        ${weakSubjects.map((s,i) => `
+          <div class="focus-card">
+            <div class="focus-rank">${i+1}</div>
+            <div class="focus-name">${esc(s.name)}</div>
+            <div class="focus-pct">${s.pct}%</div>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Top temas más repetidos -->
+      <div class="dash-section">
+        <div class="dash-section-title">🔥 Temas más repetidos en el MIR</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Ordenados por número de años en que han aparecido</div>
+        ${topTemas.map((t,i) => {
+          const cls = t.acc===null?'none':t.acc>=70?'good':t.acc>=50?'mid':'bad';
+          const bg  = i<3 ? 'rgba(245,158,11,.15)' : 'var(--surface2)';
+          const col = i<3 ? 'var(--yellow)' : 'var(--muted)';
+          return '<button onclick="startTemaTest(window._dashTemas['+i+'])" style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:var(--ui);color:var(--text)">'
+            + '<div style="width:28px;height:28px;border-radius:50%;background:'+bg+';color:'+col+';font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</div>'
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.tema)+'</div>'
+            + '<div style="font-size:11px;color:var(--muted);margin-top:2px">Años: '+t.yearList.join(', ')+' · '+t.attempted+' intentos tuyos</div>'
+            + '</div>'
+            + '<div style="text-align:right;flex-shrink:0">'
+            + '<div style="font-size:14px;font-weight:700;color:var(--yellow)">'+t.years+' años</div>'
+            + '<div class="subj-pct '+cls+'" style="font-size:11px;margin-top:1px">'+(t.acc===null?'—':t.acc+'%')+'</div>'
+            + '<div style="font-size:14px;color:var(--muted);margin-top:2px">›</div>'
+            + '</div></button>';
+        }).join('')}
+      </div>
+
+      <!-- Subject breakdown -->
+      <div class="dash-section">
+        <div class="dash-section-title">Progreso por Asignatura</div>
+        ${subjectList.map(([name, s]) => {
+          const pct = s.attempted > 0 ? Math.round(s.correct / s.attempted * 100) : null;
+          const barPct = s.total > 0 ? Math.round(s.attempted / s.total * 100) : 0;
+          const cls = pct===null?'none':pct>=70?'good':pct>=50?'mid':'bad';
+          const barColor = pct===null?'var(--muted)':pct>=70?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+          return `
+          <button class="subj-row" onclick="startSubjectTest(window._dashSubjects[${subjectList.findIndex(([n])=>n===name)}])" style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-family:var(--ui);color:var(--text)">
+            <div class="subj-row-top">
+              <div class="subj-name">${esc(name)}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                <div class="subj-pct ${cls}">${pct===null?'Sin datos':pct+'%'}</div>
+                <span style="color:var(--muted);font-size:16px">›</span>
+              </div>
+            </div>
+            <div class="subj-bar-bg">
+              <div class="subj-bar-fill" style="width:${barPct}%;background:${barColor}"></div>
+            </div>
+            <div class="subj-meta">${s.attempted} de ${s.total} preguntas intentadas · Toca para practicar</div>
+          </button>`;
+        }).join('')}
+      </div>
+    `;
+
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    body.innerHTML = `<div class="empty" style="padding:40px 20px">Error cargando estadísticas: ${e?.message||e}</div>`;
+  } finally { hideLoading(); }
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// FLAGGING & UNATTEMPTED FEATURE
+// ═══════════════════════════════════════════════════════════════
+
+function markFlagged() {
+  const q = questions[idx];
+  if (!q || answeredMap[q.id]) return;
+
+  // Toggle flag
+  const wasFlagged = flaggedSet.has(q.id);
+  if (wasFlagged) {
+    flaggedSet.delete(q.id);
+  } else {
+    flaggedSet.add(q.id);
+  }
+  const nowFlagged = !wasFlagged;
+
+  // Update button appearance immediately
+  const flagBtn = document.getElementById('flag-btn');
+  if (flagBtn) {
+    flagBtn.style.background   = nowFlagged ? 'rgba(245,158,11,.2)'  : 'var(--surface2)';
+    flagBtn.style.borderColor  = nowFlagged ? 'rgba(245,158,11,.6)'  : 'var(--border)';
+    flagBtn.style.color        = nowFlagged ? '#f59e0b'               : 'var(--yellow)';
+    flagBtn.style.opacity      = nowFlagged ? '1'                     : '0.5';
+    flagBtn.textContent        = nowFlagged ? '🚩 Marcada'            : '🚩 Marcar';
+  }
+
+  // If flagging (not un-flagging), advance to next question after brief pause
+  if (nowFlagged) {
+    clearTimeout(fbTimer);
+    fbTimer = setTimeout(() => { idx++; viewIdx = null; renderQuestion(); }, 500);
+  }
+}
+
+function markUnattempted() {
+  if (viewIdx !== null) return;
+  const q = questions[idx];
+  if (!q || q.is_annulled || answeredMap[q.id]) return;
+
+  const correct = q.correct_option;
+
+  // Hide action buttons
+  const actionBtns = document.getElementById('action-btns');
+  if (actionBtns) actionBtns.style.display = 'none';
+
+  // Clear flag if it was flagged
+  flaggedSet.delete(q.id);
+
+  // Highlight correct answer, dim the rest
+  [1,2,3,4].forEach(n => {
+    const btn = document.getElementById('opt-' + n);
+    if (!btn) return;
+    btn.disabled = true;
+    if (n === correct) btn.classList.add('correct');
+    else btn.classList.add('dimmed');
+  });
+
+  // Count as incorrect
+  score.w++;
+  updateScoreChip();
+  answeredMap[q.id] = {selected: 5, isCorrect: false};
+  saveAnswer(q, 5, false, false);
+  updateNavButtons();
+
+  // Show feedback panel — same as wrong answer
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback wrong';
+  document.getElementById('fb-icon').textContent  = '❌';
+  document.getElementById('fb-title').textContent = 'No intentado';
+  document.getElementById('fb-sub').textContent   = 'La respuesta correcta era la opción ' + correct;
+
+  const ratBtn = document.getElementById('rat-toggle');
+  const ratBox = document.getElementById('rat-box');
+  const aiBtn  = document.getElementById('ai-btn');
+  const sigBtn = document.getElementById('siguiente-btn');
+
+  if (q.rationale && q.rationale.length > 20) {
+    ratBtn.style.display = 'inline-flex';
+    ratBox.textContent = q.rationale;
+    ratBox.classList.remove('open');
+    ratBtn.textContent = '📖 Ver comentario';
+  } else {
+    ratBtn.style.display = 'none';
+    ratBox.classList.remove('open');
+  }
+  if (aiBtn) aiBtn.style.display = 'block';
+  sigBtn.style.display = 'block';
+
+  requestAnimationFrame(() => fb.classList.add('show'));
+}
+
+// ── Flagged review flow ────────────────────────────────────────
+
+function enterFlaggedReview() {
+  document.getElementById('flagged-modal').classList.remove('open');
+  isReviewingFlagged = true;
+
+  // Filter questions to only flagged ones
+  const flaggedQs = questions.filter(q => flaggedSet.has(q.id));
+  if (!flaggedQs.length) {
+    // No flagged questions left — go to finish
+    isReviewingFlagged = false;
+    doFinishExam();
+    return;
+  }
+
+  // Replace questions array with flagged-only subset for this review phase
+  // Save original for after review
+  window._preReviewQuestions = questions;
+  window._preReviewIdx = idx;
+  questions = flaggedQs;
+  idx = 0;
+  viewIdx = null;
+
+  // Update topbar to show flagged review context
+  document.getElementById('prog-lbl').textContent = `Revisando marcadas — 1 de ${flaggedQs.length}`;
+
+  // Enable free navigation (both directions)
+  document.getElementById('nav-prev').style.visibility = '';
+  document.getElementById('nav-next').style.visibility = '';
+
+  // Add "Complete" button to topbar if not already there
+  let completeBtn = document.getElementById('complete-exam-btn');
+  if (!completeBtn) {
+    completeBtn = document.createElement('button');
+    completeBtn.id = 'complete-exam-btn';
+    completeBtn.className = 'back-btn';
+    completeBtn.style.cssText = 'background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:var(--accent);font-weight:700';
+    completeBtn.textContent = '✓ Completar';
+    completeBtn.onclick = completeFlaggedReview;
+    document.querySelector('.topbar').appendChild(completeBtn);
+  }
+  completeBtn.style.display = '';
+
+  renderQuestion();
+}
+
+function completeFlaggedReview() {
+  // Check if all flagged questions have been actioned
+  const remaining = questions.filter(q => !answeredMap[q.id]);
+  if (remaining.length > 0) {
+    // Some still unanswered — ask to mark as unattempted
+    const isExam = !customTestId;
+    document.getElementById('complete-modal-title').textContent =
+      remaining.length === 1
+        ? `Queda 1 pregunta sin responder`
+        : `Quedan ${remaining.length} preguntas sin responder`;
+    document.getElementById('complete-modal-sub').textContent =
+      '¿Registrar las preguntas pendientes como no intentadas (contarán como incorrectas)?';
+    document.getElementById('complete-modal-confirm').onclick = () => {
+      document.getElementById('complete-modal').classList.remove('open');
+      remaining.forEach(q => {
+        answeredMap[q.id] = {selected: 5, isCorrect: false};
+        score.w++;
+        saveAnswer(q, 5, false, false);
+        flaggedSet.delete(q.id);
+      });
+      updateScoreChip();
+      exitFlaggedReview();
+    };
+    document.getElementById('complete-modal').classList.remove('open');
+    document.getElementById('complete-modal').classList.add('open');
+  } else {
+    exitFlaggedReview();
+  }
+}
+
+function exitFlaggedReview() {
+  // Restore original question set
+  if (window._preReviewQuestions) {
+    questions = window._preReviewQuestions;
+    idx = questions.length; // past end = triggers doFinishExam
+    window._preReviewQuestions = null;
+  }
+  isReviewingFlagged = false;
+  flaggedSet.clear();
+
+  // Hide complete button
+  const completeBtn = document.getElementById('complete-exam-btn');
+  if (completeBtn) completeBtn.style.display = 'none';
+
+  doFinishExam();
+}
+
+async function markAllFlaggedUnattempted() {
+  document.getElementById('flagged-modal').classList.remove('open');
+  // Mark all flagged questions as unattempted (option 5 = incorrect)
+  const flaggedQs = questions.filter(q => flaggedSet.has(q.id));
+  for (const q of flaggedQs) {
+    if (!answeredMap[q.id]) {
+      answeredMap[q.id] = {selected: 5, isCorrect: false};
+      score.w++;
+      await saveAnswer(q, 5, false, false);
+    }
+    flaggedSet.delete(q.id);
+  }
+  updateScoreChip();
+  await doFinishExam();
+}
+
+function confirmComplete() {
+  document.getElementById('complete-modal').classList.remove('open');
+}
+
+</script>
+</body>
+</html>
